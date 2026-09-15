@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>簡易ポイント計算＆スコア表</title>
+  <style>
+    body {
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: #f4f7f6;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+
+    .turn-info {
+      font-weight: bold;
+      font-size: 18px;
+      margin-bottom: 15px;
+      padding: 8px;
+      background-color: #eef2f5;
+      border-radius: 5px;
+      text-align: center;
+    }
+
+    .input-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 10px;
+      box-sizing: border-box;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    .result-display {
+      font-size: 20px;
+      font-weight: bold;
+      color: #2c3e50;
+      margin: 15px 0;
+      background: #e8f4f8;
+      padding: 12px;
+      border-radius: 5px;
+      text-align: center;
+    }
+
+    button {
+      background: #27ae60;
+      color: white;
+      border: none;
+      padding: 12px;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #219150;
+    }
+
+    /* ボウリング風スコア表 */
+    .table-container {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      background: white;
+      text-align: center;
+    }
+
+    th, td {
+      border: 2px solid #333;
+      padding: 8px 4px;
+      font-size: 14px;
+      min-width: 35px;
+    }
+
+    th {
+      background: #eee;
+    }
+
+    .team-header {
+      width: 90px;
+      font-weight: bold;
+    }
+
+    .total-cell {
+      background-color: #f1f2f6;
+      font-weight: bold;
+      color: #d35400;
+    }
+
+    .reset-btn {
+      background: #e74c3c;
+      margin-top: 15px;
+      font-size: 14px;
+      padding: 8px;
+    }
+
+    .reset-btn:hover {
+      background: #c0392b;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>ポイント計算＆スコア表</h1>
+
+  <!-- 計算＆入力エリア -->
+  <div class="card">
+    <div class="turn-info">
+      現在の順番: <span id="currentTeamText" style="color: #e74c3c;">チームA</span> (第<span id="currentRoundText">1</span>回)
+    </div>
+
+    <div class="input-group">
+      <label for="rawScore">素点:</label>
+      <input type="number" id="rawScore" placeholder="素点を入力" oninput="calculatePoint()">
+    </div>
+
+    <div class="input-group">
+      <label for="avgScore">平均点:</label>
+      <input type="number" id="avgScore" placeholder="平均点を入力" oninput="calculatePoint()">
+    </div>
+
+    <!-- ポイント表示欄 -->
+    <div class="result-display">
+      ポイント表示: <span id="calculatedPoint">-</span> pt
+    </div>
+
+    <!-- セットボタン -->
+    <button onclick="setScore()">セット</button>
+  </div>
+
+  <!-- スコア表エリア -->
+  <div class="card">
+    <h2>スコア表</h2>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="team-header">チーム</th>
+            <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
+            <th>6</th><th>7</th><th>8</th><th>9</th><th>10</th>
+            <th>合計</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr id="rowTeamA">
+            <td class="team-header" style="color: #e74c3c;">チームA</td>
+            <td class="score-cell"></td><td class="score-cell"></td><td class="score-cell"></td><td class="score-cell"></td><td class="score-cell"></td>
+            <td class="score-cell"></td><td class="score-cell"></td><td class="score-cell"></td><td class="score-cell"></td><td class="score-cell"></td>
+            <td class="total-cell" id="totalA">0</td>
+          </tr>
+          <tr id="rowTeamB">
+            <td class="team-header" style="color: #2980b9;">チームB</td>
+            <td class="score-cell"></td><td class="score-cell"></td><td class="score-cell"></td><td class="score-cell"></td><td class="score-cell"></td>
+            <td class="score-cell"></td><td class="score-cell"></td><td class="score-cell"></td><td class="score-cell"></td><td class="score-cell"></td>
+            <td class="total-cell" id="totalB">0</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <button class="reset-btn" onclick="resetGame()">スコアをリセット</button>
+  </div>
+
+  <script>
+    let currentTeam = 'A'; // 'A' または 'B'
+    let currentFrameA = 0; // 0〜9
+    let currentFrameB = 0; // 0〜9
+    let scoresA = new Array(10).fill(null);
+    let scoresB = new Array(10).fill(null);
+
+    // ポイント計算ロジック
+    function getCalculatedPoint() {
+      const rawInput = document.getElementById('rawScore').value;
+      const avgInput = document.getElementById('avgScore').value;
+
+      if (rawInput === '' || avgInput === '') {
+        return null;
+      }
+
+      const raw = parseFloat(rawInput);
+      const avg = parseFloat(avgInput);
+
+      let point = 0;
+      if (raw >= 90) {
+        point = raw + (raw - avg) * 1.5;
+      } else {
+        point = 2 * raw - avg;
+      }
+      return point;
+    }
+
+    // リアルタイムで「ポイント表示欄」を更新
+    function calculatePoint() {
+      const point = getCalculatedPoint();
+      const display = document.getElementById('calculatedPoint');
+      if (point !== null) {
+        // 小数点以下がある場合は2桁までに丸める
+        display.textContent = Math.round(point * 100) / 100;
+      } else {
+        display.textContent = '-';
+      }
+    }
+
+    // 「セット」ボタンを押したときの処理
+    function setScore() {
+      const point = getCalculatedPoint();
+      if (point === null) {
+        alert('素点と平均点の両方を入力してください。');
+        return;
+      }
+
+      const roundedPoint = Math.round(point * 100) / 100;
+
+      if (currentTeam === 'A') {
+        if (currentFrameA >= 10) {
+          alert('チームAは全10回終了しています。');
+          return;
+        }
+        scoresA[currentFrameA] = roundedPoint;
+        updateTableCell('rowTeamA', currentFrameA, roundedPoint);
+        currentFrameA++;
+        currentTeam = 'B';
+      } else {
+        if (currentFrameB >= 10) {
+          alert('チームBは全10回終了しています。');
+          return;
+        }
+        scoresB[currentFrameB] = roundedPoint;
+        updateTableCell('rowTeamB', currentFrameB, roundedPoint);
+        currentFrameB++;
+        currentTeam = 'A';
+      }
+
+      updateTotals();
+      clearInputs();
+      updateTurnDisplay();
+    }
+
+    // セルにスコアを入力
+    function updateTableCell(rowId, frameIndex, score) {
+      const row = document.getElementById(rowId);
+      const cells = row.getElementsByClassName('score-cell');
+      cells[frameIndex].textContent = score;
+    }
+
+    // 合計点の計算・更新
+    function updateTotals() {
+      const sumA = scoresA.reduce((acc, val) => acc + (val !== null ? val : 0), 0);
+      const sumB = scoresB.reduce((acc, val) => acc + (val !== null ? val : 0), 0);
+      document.getElementById('totalA').textContent = Math.round(sumA * 100) / 100;
+      document.getElementById('totalB').textContent = Math.round(sumB * 100) / 100;
+    }
+
+    // 入力欄のリセット
+    function clearInputs() {
+      document.getElementById('rawScore').value = '';
+      document.getElementById('avgScore').value = '';
+      document.getElementById('calculatedPoint').textContent = '-';
+    }
+
+    // ターン（順番）表示の更新
+    function updateTurnDisplay() {
+      const teamText = document.getElementById('currentTeamText');
+      const roundText = document.getElementById('currentRoundText');
+
+      if (currentFrameA >= 10 && currentFrameB >= 10) {
+        teamText.textContent = '全ゲーム終了';
+        teamText.style.color = '#27ae60';
+        roundText.textContent = '-';
+        return;
+      }
+
+      teamText.textContent = `チーム${currentTeam}`;
+      teamText.style.color = currentTeam === 'A' ? '#e74c3c' : '#2980b9';
+
+      const frameNum = (currentTeam === 'A' ? currentFrameA : currentFrameB) + 1;
+      roundText.textContent = frameNum;
+    }
+
+    // スコアリセット機能
+    function resetGame() {
+      if (!confirm('スコア表をクリアしますか？')) return;
+      currentTeam = 'A';
+      currentFrameA = 0;
+      currentFrameB = 0;
+      scoresA.fill(null);
+      scoresB.fill(null);
+
+      const cellsA = document.querySelectorAll('#rowTeamA .score-cell');
+      const cellsB = document.querySelectorAll('#rowTeamB .score-cell');
+      cellsA.forEach(cell => cell.textContent = '');
+      cellsB.forEach(cell => cell.textContent = '');
+
+      document.getElementById('totalA').textContent = '0';
+      document.getElementById('totalB').textContent = '0';
+
+      clearInputs();
+      updateTurnDisplay();
+    }
+  </script>
+</body>
+</html>
