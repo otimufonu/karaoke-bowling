@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>簡易ポイント計算＆スコア表</title>
+  <title>簡易ポイント計算＆スコア表 (ストライク機能付)</title>
   <style>
     body {
       font-family: "Helvetica Neue", Arial, sans-serif;
       padding: 20px;
-      max-width: 900px;
+      max-width: 950px;
       margin: 0 auto;
       background-color: #f4f7f6;
       color: #333;
@@ -71,18 +71,33 @@
       margin-top: 15px;
     }
 
+    .rule-box h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 16px;
+      color: #2c3e50;
+    }
+
     .inline-inputs {
       display: flex;
       align-items: center;
       gap: 8px;
       flex-wrap: wrap;
       font-weight: bold;
-      margin-top: 8px;
+      margin-top: 10px;
+      font-size: 14px;
     }
 
     .inline-inputs input {
       width: 80px;
       text-align: center;
+    }
+
+    .rule-desc {
+      font-size: 12px;
+      color: #555;
+      margin-top: 4px;
+      margin-left: 5px;
     }
 
     .btn-main {
@@ -118,6 +133,10 @@
       font-size: 13px;
       color: #666;
       margin-bottom: 15px;
+      background: #fdfefe;
+      padding: 6px;
+      border: 1px dashed #ccc;
+      border-radius: 4px;
     }
 
     .result-display {
@@ -131,7 +150,7 @@
       text-align: center;
     }
 
-    /* ボウリング風スコア表 */
+    /* スコア表 */
     .table-container {
       overflow-x: auto;
     }
@@ -148,7 +167,7 @@
       border: 2px solid #333;
       padding: 8px 4px;
       font-size: 14px;
-      min-width: 40px;
+      min-width: 45px;
     }
 
     th {
@@ -253,27 +272,40 @@
       <div id="teamNamesContainer" class="team-name-inputs"></div>
     </div>
 
-    <!-- ボーナス条件設定 -->
+    <!-- 詳細ルール設定エリア -->
     <div class="rule-box">
-      <label>計算式ルール設定:</label>
+      <h3>計算＆ストライク処理ルール設定</h3>
+      
       <div class="inline-inputs">
-        素点が
-        <input type="number" id="thresholdInput" value="90">
-        点以上の場合、
+        ① ボーナス基準素点:
+        <input type="number" id="thresholdInput" value="90"> 点以上
       </div>
-      <div class="inline-inputs" style="margin-top: 5px;">
-        【 素点 ＋ (素点 － 平均点) × <input type="number" id="multiplierInput" value="1.5" step="0.1"> 】
+      <div class="rule-desc">※上記未満の場合の基本点 ＝ 【 2 × 素点 － 全国平均 】</div>
+
+      <div class="inline-inputs">
+        ② 通常ボーナス倍率:
+        <input type="number" id="multiplierInput" value="1.3" step="0.1"> 倍
       </div>
-      <div style="font-size: 12px; color: #555; margin-top: 8px;">
-        ※素点が設定値未満の場合は【 2 × 素点 － 平均点 】で計算されます。
+      <div class="rule-desc">※上記以上の基本点 ＝ 【 素点 ＋ (素点 － 全国平均) × 通常倍率 】</div>
+
+      <div class="inline-inputs">
+        ③ ストライク判定閾値: 【 (素点 － 全国平均) × 通常倍率 】 ≧
+        <input type="number" id="strikeThresholdInput" value="10" step="1"> 点
       </div>
+      <div class="rule-desc">※素点が①以上かつ③を満たすと「ストライク💥」獲得</div>
+
+      <div class="inline-inputs">
+        ④ 次曲90点以上時の追加ボーナス倍率:
+        <input type="number" id="strikeBonusMultInput" value="1.3" step="0.1"> 倍
+      </div>
+      <div class="rule-desc">※ストライク後の曲が90点以上の時、前曲へのボーナスは 【 次曲平均差 × 通常倍率 × 追加倍率 】</div>
     </div>
 
     <button class="btn-main" onclick="startGame()">ゲーム開始</button>
   </div>
 
 
-  <!-- 2. ゲームメイン画面（初期状態は隠す） -->
+  <!-- 2. ゲームメイン画面 -->
   <div id="gameScreen" style="display: none;">
     
     <!-- 計算＆入力エリア -->
@@ -291,13 +323,13 @@
         </div>
         <div class="form-group">
           <label for="avgScore">平均点:</label>
-          <input type="number" id="avgScore" placeholder="平均点を入力" oninput="calculatePoint()">
+          <input type="number" id="avgScore" placeholder="全国平均を入力" oninput="calculatePoint()">
         </div>
       </div>
 
       <!-- ポイント表示欄 -->
       <div class="result-display">
-        ポイント表示: <span id="calculatedPoint">-</span> pt
+        ポイント表示: <span id="calculatedPoint">-</span>
       </div>
 
       <!-- セットボタン -->
@@ -311,16 +343,16 @@
         <table>
           <thead>
             <tr id="scoreTheadRow">
-              <!-- JSで動的にヘッダー(1~N曲, 合計)を生成 -->
+              <!-- JSで動的にヘッダー生成 -->
             </tr>
           </thead>
           <tbody id="scoreTbody">
-            <!-- JSで動的にチーム行を生成 -->
+            <!-- JSで動的にチーム行生成 -->
           </tbody>
         </table>
       </div>
 
-      <div class="note">※表の数字を直接クリックして手動編集・修正も可能です。</div>
+      <div class="note">※💥マークはストライク。マス目を直接クリックして手動修正も可能です。</div>
 
       <div class="btn-action-container">
         <button class="btn-sub" onclick="backToConfig()">⚙️ ルール設定に戻る</button>
@@ -331,32 +363,32 @@
   </div>
 
   <script>
-    // チーム識別カラー
     const TEAM_COLORS = [
       '#e74c3c', '#2980b9', '#27ae60', '#8e44ad', 
       '#e67e22', '#16a085', '#d35400', '#2c3e50'
     ];
 
-    // 設定保持変数
     let gameConfig = {
       teamCount: 2,
       songCount: 5,
       teamNames: [],
       threshold: 90,
-      multiplier: 1.5
+      multiplier: 1.3,
+      strikeThreshold: 10,
+      strikeBonusMult: 1.3
     };
 
-    // 画面ロード時の初期化
+    // スコア保持配列 [teamIndex][songIndex] = { raw, avg, manual }
+    let gameState = [];
+
     document.addEventListener('DOMContentLoaded', () => {
       renderTeamNameInputs();
     });
 
-    // チーム数に合わせてチーム名入力欄を動的生成 (A, B, C...)
     function renderTeamNameInputs() {
       const container = document.getElementById('teamNamesContainer');
       const count = parseInt(document.getElementById('teamCountInput').value) || 1;
       
-      // 既存の入力値があれば引き継ぐ
       const currentInputs = container.querySelectorAll('input');
       const existingNames = Array.from(currentInputs).map(input => input.value);
 
@@ -372,33 +404,39 @@
       }
     }
 
-    // ゲーム開始処理
     function startGame() {
-      // 設定の読み込み
       gameConfig.teamCount = parseInt(document.getElementById('teamCountInput').value) || 2;
       gameConfig.songCount = parseInt(document.getElementById('songCountInput').value) || 5;
       gameConfig.threshold = parseFloat(document.getElementById('thresholdInput').value) || 90;
-      gameConfig.multiplier = parseFloat(document.getElementById('multiplierInput').value) || 1.5;
+      gameConfig.multiplier = parseFloat(document.getElementById('multiplierInput').value) || 1.3;
+      gameConfig.strikeThreshold = parseFloat(document.getElementById('strikeThresholdInput').value) || 10;
+      gameConfig.strikeBonusMult = parseFloat(document.getElementById('strikeBonusMultInput').value) || 1.3;
 
       const nameInputs = document.querySelectorAll('#teamNamesContainer input');
       gameConfig.teamNames = Array.from(nameInputs).map((input, idx) => input.value.trim() || `チーム${idx + 1}`);
 
-      // ルール表示バッジの更新
       document.getElementById('ruleBadgeText').textContent = 
-        `【現在ルール】素点 ${gameConfig.threshold}点以上で差分 ${gameConfig.multiplier}倍 / 全${gameConfig.songCount}曲`;
+        `【現在ルール】素点${gameConfig.threshold}点以上で${gameConfig.multiplier}倍 / ストライク条件: 平均差×${gameConfig.multiplier} ≧ ${gameConfig.strikeThreshold}点 (追加倍率: ${gameConfig.strikeBonusMult}倍)`;
 
-      // スコア表のテーブルヘッダー・ボディを構築
+      // データ構造初期化
+      gameState = [];
+      for (let t = 0; t < gameConfig.teamCount; t++) {
+        let songs = [];
+        for (let s = 0; s < gameConfig.songCount; s++) {
+          songs.push({ raw: null, avg: null, manual: null });
+        }
+        gameState.push(songs);
+      }
+
       buildScoreTable();
 
-      // 画面切り替え
       document.getElementById('configScreen').style.display = 'none';
       document.getElementById('gameScreen').style.display = 'block';
 
       clearInputs();
-      syncAndRecalculate();
+      recalculateAll();
     }
 
-    // 設定画面に戻る
     function backToConfig() {
       if (confirm('ルール設定に戻りますか？（現在のスコア表はリセットされます）')) {
         document.getElementById('gameScreen').style.display = 'none';
@@ -406,7 +444,6 @@
       }
     }
 
-    // スコア表のHTML生成
     function buildScoreTable() {
       const theadRow = document.getElementById('scoreTheadRow');
       const tbody = document.getElementById('scoreTbody');
@@ -424,20 +461,20 @@
         const tr = document.createElement('tr');
         const color = TEAM_COLORS[t % TEAM_COLORS.length];
 
-        // チーム名
         const tdTeam = document.createElement('td');
         tdTeam.className = 'team-header';
         tdTeam.style.color = color;
         tdTeam.textContent = gameConfig.teamNames[t];
         tr.appendChild(tdTeam);
 
-        // 各曲の入力セル
         for (let s = 0; s < gameConfig.songCount; s++) {
           const td = document.createElement('td');
           td.className = 'score-cell';
           td.contentEditable = 'true';
+          td.dataset.team = t;
+          td.dataset.song = s;
 
-          td.addEventListener('input', syncAndRecalculate);
+          td.addEventListener('input', (e) => onCellInput(t, s, e.target));
           td.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
@@ -447,9 +484,9 @@
           tr.appendChild(td);
         }
 
-        // 合計
         const tdTotal = document.createElement('td');
         tdTotal.className = 'total-cell';
+        tdTotal.id = `total-team-${t}`;
         tdTotal.textContent = '0';
         tr.appendChild(tdTotal);
 
@@ -457,58 +494,44 @@
       }
     }
 
-    // ポイント計算ロジック（動的ルール対応）
-    function getCalculatedPoint() {
+    // ポイントリアルタイム計算（単体）
+    function calculatePoint() {
       const rawInput = document.getElementById('rawScore').value;
       const avgInput = document.getElementById('avgScore').value;
+      const display = document.getElementById('calculatedPoint');
 
       if (rawInput === '' || avgInput === '') {
-        return null;
+        display.textContent = '-';
+        return;
       }
 
       const raw = parseFloat(rawInput);
       const avg = parseFloat(avgInput);
+      const diff = raw - avg;
+
+      // 独立したストライク判定
+      const isStrike = (raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
 
       let point = 0;
       if (raw >= gameConfig.threshold) {
-        point = raw + (raw - avg) * gameConfig.multiplier;
+        point = raw + diff * gameConfig.multiplier;
       } else {
         point = 2 * raw - avg;
       }
-      return point;
-    }
 
-    // リアルタイムで「ポイント表示欄」を更新
-    function calculatePoint() {
-      const point = getCalculatedPoint();
-      const display = document.getElementById('calculatedPoint');
-      if (point !== null) {
-        display.textContent = Math.round(point * 100) / 100;
-      } else {
-        display.textContent = '-';
+      let text = Math.round(point) + ' pt';
+      if (isStrike) {
+        text += ' 💥 (ストライク!)';
       }
+      display.textContent = text;
     }
 
-    // 次にスコアを入れるべきチームと曲番号を検索
-    function getNextTurnInfo() {
-      const tbody = document.getElementById('scoreTbody');
-      const rows = tbody.querySelectorAll('tr');
-
-      for (let song = 0; song < gameConfig.songCount; song++) {
-        for (let t = 0; t < rows.length; t++) {
-          const cell = rows[t].children[song + 1];
-          if (cell.textContent.trim() === '') {
-            return { teamIndex: t, songIndex: song };
-          }
-        }
-      }
-      return null;
-    }
-
-    // 「セット」ボタンを押したときの処理
+    // 「セット」ボタン処理
     function setScore() {
-      const point = getCalculatedPoint();
-      if (point === null) {
+      const rawInput = document.getElementById('rawScore').value;
+      const avgInput = document.getElementById('avgScore').value;
+
+      if (rawInput === '' || avgInput === '') {
         alert('素点と平均点の両方を入力してください。');
         return;
       }
@@ -519,38 +542,137 @@
         return;
       }
 
-      const roundedPoint = Math.round(point * 100) / 100;
-      const rows = document.querySelectorAll('#scoreTbody tr');
-      const targetCell = rows[turnInfo.teamIndex].children[turnInfo.songIndex + 1];
+      gameState[turnInfo.teamIndex][turnInfo.songIndex] = {
+        raw: parseFloat(rawInput),
+        avg: parseFloat(avgInput),
+        manual: null
+      };
 
-      targetCell.textContent = roundedPoint;
-
-      syncAndRecalculate();
+      recalculateAll();
       clearInputs();
     }
 
-    // 表からスコアを集計し、合計点とターン表示を更新
-    function syncAndRecalculate() {
-      const tbody = document.getElementById('scoreTbody');
-      const rows = tbody.querySelectorAll('tr');
+    // マス直接手動編集時のハンドラ
+    function onCellInput(t, s, cellDOM) {
+      let text = cellDOM.textContent.trim().replace("💥", "").trim();
+      if (text === "") {
+        gameState[t][s] = { raw: null, avg: null, manual: null };
+      } else {
+        let val = parseFloat(text);
+        if (!isNaN(val)) {
+          gameState[t][s] = { raw: null, avg: null, manual: val };
+        }
+      }
+      recalculateAll();
+    }
 
-      rows.forEach(row => {
-        let sum = 0;
-        const cells = row.querySelectorAll('.score-cell');
-        cells.forEach(cell => {
-          const val = parseFloat(cell.textContent.trim());
-          if (!isNaN(val)) {
-            sum += val;
+    // 次にスコアを入れるべきターンを取得
+    function getNextTurnInfo() {
+      for (let song = 0; song < gameConfig.songCount; song++) {
+        for (let t = 0; t < gameConfig.teamCount; t++) {
+          const data = gameState[t][song];
+          if (data.raw === null && data.manual === null) {
+            return { teamIndex: t, songIndex: song };
           }
-        });
-        const totalCell = row.querySelector('.total-cell');
-        totalCell.textContent = Math.round(sum * 100) / 100;
-      });
+        }
+      }
+      return null;
+    }
+
+    // 全スコア再計算・ストライクボーナス適用・画面反映
+    function recalculateAll() {
+      for (let t = 0; t < gameConfig.teamCount; t++) {
+        let songResults = [];
+
+        // Step 1: 各曲の単体計算およびストライク判定
+        for (let s = 0; s < gameConfig.songCount; s++) {
+          let data = gameState[t][s];
+
+          if (data.manual !== null) {
+            songResults.push({
+              isEntered: true,
+              isManual: true,
+              basePoint: data.manual,
+              diff: 0,
+              raw: null,
+              isStrike: false
+            });
+          } else if (data.raw !== null && data.avg !== null) {
+            let diff = data.raw - data.avg;
+            // 判定は常に「平均差 * 通常倍率 ≧ 閾値」
+            let isStrike = (data.raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
+            
+            let basePoint = (data.raw >= gameConfig.threshold)
+              ? (data.raw + diff * gameConfig.multiplier)
+              : (2 * data.raw - data.avg);
+
+            songResults.push({
+              isEntered: true,
+              isManual: false,
+              basePoint: basePoint,
+              diff: diff,
+              raw: data.raw,
+              isStrike: isStrike
+            });
+          } else {
+            songResults.push({
+              isEntered: false,
+              isManual: false,
+              basePoint: 0,
+              diff: 0,
+              raw: null,
+              isStrike: false
+            });
+          }
+        }
+
+        // Step 2: ストライクボーナスの計算と最終ポイント決定
+        let totalScore = 0;
+        for (let s = 0; s < gameConfig.songCount; s++) {
+          let res = songResults[s];
+          let finalPoint = res.basePoint;
+
+          if (res.isEntered) {
+            // 前曲(s)がストライクで、次曲(s+1)が入力されている場合にボーナスを加算
+            if (res.isStrike && (s + 1 < gameConfig.songCount)) {
+              let nextRes = songResults[s + 1];
+              if (nextRes.isEntered && !nextRes.isManual) {
+                let bonus = nextRes.diff * gameConfig.multiplier;
+                // 次曲が90点以上なら追加倍率を乗算
+                if (nextRes.raw >= gameConfig.threshold) {
+                  bonus *= gameConfig.strikeBonusMult;
+                }
+                finalPoint += bonus;
+              }
+            }
+
+            let roundedPoint = Math.round(finalPoint);
+            totalScore += roundedPoint;
+
+            // DOM更新
+            const cell = document.querySelector(`.score-cell[data-team="${t}"][data-song="${s}"]`);
+            if (cell && document.activeElement !== cell) {
+              cell.textContent = roundedPoint + (res.isStrike ? " 💥" : "");
+            }
+          } else {
+            const cell = document.querySelector(`.score-cell[data-team="${t}"][data-song="${s}"]`);
+            if (cell && document.activeElement !== cell) {
+              cell.textContent = "";
+            }
+          }
+        }
+
+        // 合計表示の更新
+        const totalCell = document.getElementById(`total-team-${t}`);
+        if (totalCell) {
+          totalCell.textContent = Math.round(totalScore);
+        }
+      }
 
       updateTurnDisplay();
     }
 
-    // 順番（ターン）表示の更新
+    // 順番（ターン）表示更新
     function updateTurnDisplay() {
       const turnInfo = getNextTurnInfo();
       const teamText = document.getElementById('currentTeamText');
@@ -572,21 +694,21 @@
       roundText.textContent = turnInfo.songIndex + 1;
     }
 
-    // 入力欄のリセット
     function clearInputs() {
       document.getElementById('rawScore').value = '';
       document.getElementById('avgScore').value = '';
       document.getElementById('calculatedPoint').textContent = '-';
     }
 
-    // スコアのみクリア
     function resetGame() {
       if (!confirm('スコア表の数字をクリアしますか？')) return;
-      const cells = document.querySelectorAll('.score-cell');
-      cells.forEach(cell => cell.textContent = '');
-
+      for (let t = 0; t < gameConfig.teamCount; t++) {
+        for (let s = 0; s < gameConfig.songCount; s++) {
+          gameState[t][s] = { raw: null, avg: null, manual: null };
+        }
+      }
       clearInputs();
-      syncAndRecalculate();
+      recalculateAll();
     }
   </script>
 </body>
