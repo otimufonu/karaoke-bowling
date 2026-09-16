@@ -51,7 +51,7 @@
       display: flex;
       flex-direction: column;
       margin-bottom: 0;
-      min-height: 0; /* 高さの自動縮小を許可 */
+      min-height: 0;
     }
 
     .turn-info {
@@ -354,16 +354,36 @@
       font-weight: bold;
       margin-top: 10px;
       margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .detail-team-summary {
+      font-size: 11px;
+      font-weight: normal;
+      color: #444;
+      background: #f0f3f5;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #ddd;
     }
 
     .detail-table {
       font-size: 11px;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
     }
 
     .detail-table th {
       background: #f8f9fa;
       font-size: 10px;
+    }
+
+    .detail-table tfoot td {
+      font-weight: bold;
+      font-size: 11px;
     }
   </style>
 </head>
@@ -516,10 +536,7 @@
       strikeBonusMult: 1.3
     };
 
-    // スコア保持配列 [teamIndex][songIndex] = { raw, avg }
     let gameState = [];
-    
-    // 現在選択されているセル { team, song }
     let selectedCell = { team: 0, song: 0 };
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -889,6 +906,7 @@
       }
     }
 
+    // 内訳モーダル画面 (素点合計・平均を追加)
     function openDetailModal() {
       const container = document.getElementById('modalBodyContainer');
       container.innerHTML = '';
@@ -896,10 +914,32 @@
       for (let t = 0; t < gameConfig.teamCount; t++) {
         const color = TEAM_COLORS[t % TEAM_COLORS.length];
         
+        let totalRaw = 0;
+        let totalAvg = 0;
+        let enteredCount = 0;
+        let totalFinalPoint = 0;
+
+        // 一旦計算用ループ
+        for (let s = 0; s < gameConfig.songCount; s++) {
+          const data = gameState[t][s];
+          if (data && data.raw !== null && data.avg !== null) {
+            totalRaw += data.raw;
+            totalAvg += data.avg;
+            enteredCount++;
+          }
+        }
+
+        const rawAvg = enteredCount > 0 ? (totalRaw / enteredCount) : 0;
+        const avgSummaryText = enteredCount > 0 
+          ? `素点合計: ${totalRaw.toFixed(1)}点 / 素点平均: ${rawAvg.toFixed(2)}点` 
+          : `未入力`;
+
         const title = document.createElement('div');
         title.className = 'detail-team-title';
-        title.style.color = color;
-        title.textContent = `■ ${gameConfig.teamNames[t]}`;
+        title.innerHTML = `
+          <span style="color: ${color};">■ ${gameConfig.teamNames[t]}</span>
+          <span class="detail-team-summary">${avgSummaryText}</span>
+        `;
         container.appendChild(title);
 
         const table = document.createElement('table');
@@ -918,9 +958,11 @@
             </tr>
           </thead>
           <tbody></tbody>
+          <tfoot></tfoot>
         `;
 
         const tbody = table.querySelector('tbody');
+        const tfoot = table.querySelector('tfoot');
 
         for (let s = 0; s < gameConfig.songCount; s++) {
           const data = gameState[t][s];
@@ -957,6 +999,7 @@
             }
 
             let finalPoint = Math.round(basePoint + bonus);
+            totalFinalPoint += finalPoint;
 
             let judgeText = "通常";
             if (isStrike) judgeText = "ストライク ✕";
@@ -980,6 +1023,36 @@
           }
 
           tbody.appendChild(tr);
+        }
+
+        // tfoot に合計行・平均行を追加
+        if (enteredCount > 0) {
+          const diffSum = totalRaw - totalAvg;
+          const diffAvg = diffSum / enteredCount;
+          const avgAvg = totalAvg / enteredCount;
+
+          tfoot.innerHTML = `
+            <tr style="background-color: #f0f4f8;">
+              <td>合計</td>
+              <td>${totalRaw.toFixed(1)}点</td>
+              <td>${totalAvg.toFixed(1)}点</td>
+              <td>${diffSum > 0 ? '+' : ''}${diffSum.toFixed(1)}</td>
+              <td>-</td>
+              <td>-</td>
+              <td>-</td>
+              <td>${totalFinalPoint}pt</td>
+            </tr>
+            <tr style="background-color: #e8f0f8;">
+              <td>平均</td>
+              <td>${rawAvg.toFixed(2)}点</td>
+              <td>${avgAvg.toFixed(2)}点</td>
+              <td>${diffAvg > 0 ? '+' : ''}${diffAvg.toFixed(2)}</td>
+              <td>-</td>
+              <td>-</td>
+              <td>-</td>
+              <td>${(totalFinalPoint / enteredCount).toFixed(1)}pt</td>
+            </tr>
+          `;
         }
 
         container.appendChild(table);
