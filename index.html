@@ -166,14 +166,17 @@
 
     th, td {
       border: 1px solid #333;
-      padding: 5px 2px;
+      padding: 0;
       font-size: 12px;
-      min-width: 32px;
+      min-width: 46px;
+      height: 46px;
     }
 
     th {
       background: #eee;
       font-size: 11px;
+      padding: 4px 2px;
+      height: auto;
     }
 
     .score-cell {
@@ -181,6 +184,7 @@
       background-color: #fff;
       transition: background-color 0.2s, outline 0.2s;
       user-select: none;
+      padding: 0 !important;
     }
 
     .score-cell:hover {
@@ -193,17 +197,64 @@
       font-weight: bold;
     }
 
+    /* ボウリングスタイルグリッドセル */
+    .bowling-cell {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+    }
+
+    .cell-top {
+      display: flex;
+      flex: 1;
+      border-bottom: 1px solid #333;
+      height: 50%;
+    }
+
+    .cell-tl {
+      flex: 1;
+      border-right: 1px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    .cell-tr {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: #333;
+    }
+
+    .cell-bottom {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: bold;
+      height: 50%;
+    }
+
     .team-header {
       width: 75px;
       font-weight: bold;
       white-space: nowrap;
       font-size: 11px;
+      padding: 4px 2px;
     }
 
     .total-cell {
       background-color: #f1f2f6;
       font-weight: bold;
       color: #d35400;
+      padding: 4px 2px;
     }
 
     .note {
@@ -492,7 +543,7 @@
         </table>
       </div>
 
-      <div class="note">※ ✕：ストライク、╱：スペア、〇：スプリット。<b>マス目クリックで編集</b></div>
+      <div class="note">※ 左上:素点 / 右上:ボーナス / 下:累計。<b>マス目クリックで編集</b></div>
 
       <div class="btn-action-container">
         <button class="btn-info" onclick="openDetailModal()">📊 内訳</button>
@@ -872,44 +923,69 @@
           }
         }
 
+        let cumulative = 0;
+        let prevCalculated = true;
         let totalScore = 0;
+
         for (let s = 0; s < gameConfig.songCount; s++) {
           let res = songResults[s];
-          let finalPoint = res.basePoint;
+          let displayTL = "";
+          let displayTR = "";
+          let displayB = "";
 
           if (res.isEntered) {
-            if (res.isStrike && !res.isFinal && (s + 1 < gameConfig.songCount)) {
-              let nextRes = songResults[s + 1];
-              if (nextRes.isEntered) {
+            displayTL = Math.round(res.raw);
+            let bonusPt = null;
+
+            if (res.isStrike && !res.isFinal) {
+              // ストライクかつ最終曲以外
+              if (s + 1 < gameConfig.songCount && songResults[s + 1].isEntered) {
+                let nextRes = songResults[s + 1];
                 let bonus = nextRes.diff * gameConfig.multiplier;
                 if (nextRes.raw >= gameConfig.threshold) {
                   bonus *= gameConfig.strikeBonusMult;
                 }
-                finalPoint += bonus;
+                bonusPt = Math.round((res.basePoint - res.raw) + bonus);
+              } else {
+                // 次の点数が確定するまで保留
+                bonusPt = null;
               }
+            } else {
+              // 通常・スペア・スプリット・最終曲
+              bonusPt = Math.round(res.basePoint - res.raw);
             }
 
-            let roundedPoint = Math.round(finalPoint);
-            totalScore += roundedPoint;
+            if (bonusPt !== null) {
+              displayTR = bonusPt;
 
-            let symbol = "";
-            if (res.isStrike) {
-              symbol = " ✕";
-            } else if (res.isSpare) {
-              symbol = " ╱";
-            } else if (res.isSplit) {
-              symbol = " 〇";
+              if (s === 0 || prevCalculated) {
+                let frameTotal = Math.round(res.raw) + bonusPt;
+                cumulative += frameTotal;
+                displayB = cumulative;
+                totalScore = cumulative;
+                prevCalculated = true;
+              } else {
+                displayB = "";
+                prevCalculated = false;
+              }
+            } else {
+              displayTR = "";
+              displayB = "";
+              prevCalculated = false;
             }
+          }
 
-            const cell = document.querySelector(`.score-cell[data-team="${t}"][data-song="${s}"]`);
-            if (cell) {
-              cell.textContent = roundedPoint + symbol;
-            }
-          } else {
-            const cell = document.querySelector(`.score-cell[data-team="${t}"][data-song="${s}"]`);
-            if (cell) {
-              cell.textContent = "";
-            }
+          const cell = document.querySelector(`.score-cell[data-team="${t}"][data-song="${s}"]`);
+          if (cell) {
+            cell.innerHTML = `
+              <div class="bowling-cell">
+                <div class="cell-top">
+                  <div class="cell-tl">${displayTL !== "" ? displayTL : ""}</div>
+                  <div class="cell-tr">${displayTR !== "" ? displayTR : ""}</div>
+                </div>
+                <div class="cell-bottom">${displayB !== "" ? displayB : ""}</div>
+              </div>
+            `;
           }
         }
 
@@ -1052,8 +1128,8 @@
         
         for (let s = 0; s < gameConfig.songCount; s++) {
           const cell = document.querySelector(`.score-cell[data-team="${t}"][data-song="${s}"]`);
-          const text = cell ? cell.textContent : '';
-          scoreTableHtml += `<td style="border:1px solid #333; padding:5px;">${text}</td>`;
+          const text = cell ? cell.innerHTML : '';
+          scoreTableHtml += `<td style="border:1px solid #333; padding:0; width:45px; height:45px;">${text}</td>`;
         }
         scoreTableHtml += `<td style="border:1px solid #333; padding:5px; font-weight:bold; background:#f9f9f9; color:#d35400;">${computedTotals[t] || 0}</td>`;
         scoreTableHtml += `</tr>`;
@@ -1242,7 +1318,7 @@
                 <td style="border:1px solid #ccc; padding:4px;">-</td>
                 <td style="border:1px solid #ccc; padding:4px; font-weight:bold;">${totalFinalPoint}pt</td>
               </tr>
-              <tr style="background-color: #e8f0f8;">
+              <tr style="background-color: #e8f8f8;">
                 <td style="border:1px solid #ccc; padding:4px; font-weight:bold;">平均</td>
                 <td style="border:1px solid #ccc; padding:4px; font-weight:bold;">${rawAvg.toFixed(2)}点</td>
                 <td style="border:1px solid #ccc; padding:4px; font-weight:bold;">${avgAvg.toFixed(2)}点</td>
