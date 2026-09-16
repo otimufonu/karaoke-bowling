@@ -418,7 +418,7 @@
         ① ボーナス基準素点:
         <input type="number" id="thresholdInput" value="90"> 点以上
       </div>
-      <div class="rule-desc">※上記未満の場合の基本点 ＝ 【 2 × 素点 － 全国平均 】</div>
+      <div class="rule-desc">※上記未満かつスプリット未達成の場合 ＝ 【 2 × 素点 － 全国平均 】</div>
 
       <div class="inline-inputs">
         ② 通常ボーナス倍率:
@@ -427,16 +427,32 @@
       <div class="rule-desc">※①以上の場合の基本点 ＝ 【 素点 ＋ (素点 － 全国平均) × 通常倍率 】</div>
 
       <div class="inline-inputs">
-        ③ ストライク [✕] 判定閾値: 【 (素点 － 全国平均) × 通常倍率 】 ≧
+        ③ ストライク [✕] 判定閾値: 平均差 × 通常倍率 ≧
         <input type="number" id="strikeThresholdInput" value="10" step="1"> 点
       </div>
-      <div class="rule-desc">※素点①以上かつ③達成で「ストライク ✕」(次曲ボーナスあり)。③未達成なら「スペア ╱」。</div>
+      <div class="rule-desc">※①以上かつ③達成で「ストライク ✕」(次曲ボーナスあり)。未達成なら「スペア ╱」。</div>
 
       <div class="inline-inputs">
         ④ 次曲90点以上時の追加ボーナス倍率:
         <input type="number" id="strikeBonusMultInput" value="1.3" step="0.1"> 倍
       </div>
-      <div class="rule-desc">※ストライク後の曲が90点以上の時、前曲へのボーナスは 【 次曲平均差 × 通常倍率 × 追加倍率 】</div>
+      <div class="rule-desc">※ストライク後の曲が90点以上の時、前曲ボーナスは 【 次曲平均差 × 通常倍率 × 追加倍率 】</div>
+
+      <div class="inline-inputs">
+        ⑤ スプリット [〇] 設定: 素点①未満かつ (素点 － 全国平均) ≧
+        <input type="number" id="splitThresholdInput" value="3" step="1"> 点
+      </div>
+      <div class="inline-inputs" style="margin-top:2px;">
+        スプリット倍率:
+        <input type="number" id="splitMultiplierInput" value="1.2" step="0.1"> 倍
+      </div>
+      <div class="rule-desc">※素点①未満でも平均差達成で「スプリット 〇」。【 素点 ＋ (素点 － 全国平均) × スプリット倍率 】</div>
+
+      <div class="inline-inputs">
+        ⑥ 最終フレーム（最終曲）倍率:
+        <input type="number" id="finalMultiplierInput" value="1.5" step="0.1"> 倍
+      </div>
+      <div class="rule-desc">※最終曲のポイント ＝ 【 素点 ＋ (素点 － 全国平均) × 最終曲倍率 】</div>
     </div>
 
     <button class="btn-main" onclick="startGame()">ゲーム開始</button>
@@ -477,7 +493,7 @@
     <!-- スコア表エリア -->
     <div class="card score-card">
       <div class="score-header-container">
-        <!-- タイトル横（画面上部）に常時表示される各チームの合計点バッジ -->
+        <!-- 常時表示される各チームの合計点バッジ -->
         <div id="miniTotals" class="mini-totals-container"></div>
       </div>
 
@@ -494,7 +510,7 @@
         </table>
       </div>
 
-      <div class="note">※ ✕：ストライク、╱：スペア。<b>マス目クリックで編集</b></div>
+      <div class="note">※ ✕：ストライク、╱：スペア、〇：スプリット。<b>マス目クリックで編集</b></div>
 
       <div class="btn-action-container">
         <button class="btn-info" onclick="openDetailModal()">📊 内訳</button>
@@ -533,7 +549,10 @@
       threshold: 90,
       multiplier: 1.3,
       strikeThreshold: 10,
-      strikeBonusMult: 1.3
+      strikeBonusMult: 1.3,
+      splitThreshold: 3,
+      splitMultiplier: 1.2,
+      finalMultiplier: 1.5
     };
 
     let gameState = [];
@@ -569,6 +588,9 @@
           document.getElementById('multiplierInput').value = gameConfig.multiplier;
           document.getElementById('strikeThresholdInput').value = gameConfig.strikeThreshold;
           document.getElementById('strikeBonusMultInput').value = gameConfig.strikeBonusMult;
+          document.getElementById('splitThresholdInput').value = gameConfig.splitThreshold ?? 3;
+          document.getElementById('splitMultiplierInput').value = gameConfig.splitMultiplier ?? 1.2;
+          document.getElementById('finalMultiplierInput').value = gameConfig.finalMultiplier ?? 1.5;
 
           renderTeamNameInputs();
           const nameInputs = document.querySelectorAll('#teamNamesContainer input');
@@ -577,9 +599,7 @@
           });
 
           if (data.isGameActive) {
-            document.getElementById('ruleBadgeText').textContent = 
-              `【現在ルール】素点${gameConfig.threshold}点以上で${gameConfig.multiplier}倍 | ✕: 平均差×${gameConfig.multiplier} ≧ ${gameConfig.strikeThreshold}点`;
-
+            updateRuleBadgeText();
             buildScoreTable();
             document.getElementById('configScreen').style.display = 'none';
             document.getElementById('gameScreen').style.display = 'flex';
@@ -591,6 +611,11 @@
       } catch (e) {
         console.error('保存データの読み込みに失敗しました', e);
       }
+    }
+
+    function updateRuleBadgeText() {
+      document.getElementById('ruleBadgeText').textContent = 
+        `【現在ルール】基準:${gameConfig.threshold}点 | ✕:差×${gameConfig.multiplier}≧${gameConfig.strikeThreshold} | 〇:差≧${gameConfig.splitThreshold}点(×${gameConfig.splitMultiplier}) | 最終:×${gameConfig.finalMultiplier}`;
     }
 
     function renderTeamNameInputs() {
@@ -619,12 +644,14 @@
       gameConfig.multiplier = parseFloat(document.getElementById('multiplierInput').value) || 1.3;
       gameConfig.strikeThreshold = parseFloat(document.getElementById('strikeThresholdInput').value) || 10;
       gameConfig.strikeBonusMult = parseFloat(document.getElementById('strikeBonusMultInput').value) || 1.3;
+      gameConfig.splitThreshold = parseFloat(document.getElementById('splitThresholdInput').value) ?? 3;
+      gameConfig.splitMultiplier = parseFloat(document.getElementById('splitMultiplierInput').value) ?? 1.2;
+      gameConfig.finalMultiplier = parseFloat(document.getElementById('finalMultiplierInput').value) ?? 1.5;
 
       const nameInputs = document.querySelectorAll('#teamNamesContainer input');
       gameConfig.teamNames = Array.from(nameInputs).map((input, idx) => input.value.trim() || `チーム${idx + 1}`);
 
-      document.getElementById('ruleBadgeText').textContent = 
-        `【現在ルール】素点${gameConfig.threshold}点以上で${gameConfig.multiplier}倍 | ✕: 平均差×${gameConfig.multiplier} ≧ ${gameConfig.strikeThreshold}点`;
+      updateRuleBadgeText();
 
       if (!gameState || gameState.length !== gameConfig.teamCount || (gameState[0] && gameState[0].length !== gameConfig.songCount)) {
         gameState = [];
@@ -720,6 +747,7 @@
       calculatePoint();
     }
 
+    // リアルタイム単体計算表示
     function calculatePoint() {
       const rawInput = document.getElementById('rawScore').value;
       const avgInput = document.getElementById('avgScore').value;
@@ -733,17 +761,30 @@
       const raw = parseFloat(rawInput);
       const avg = parseFloat(avgInput);
       const diff = raw - avg;
+      const isFinal = (selectedCell.song === gameConfig.songCount - 1);
 
       const isStrike = (raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
       const isSpare = (raw >= gameConfig.threshold) && !isStrike;
+      const isSplit = (raw < gameConfig.threshold) && (diff >= gameConfig.splitThreshold);
 
-      let point = (raw >= gameConfig.threshold) ? (raw + diff * gameConfig.multiplier) : (2 * raw - avg);
+      let point = 0;
+      if (isFinal) {
+        point = raw + diff * gameConfig.finalMultiplier;
+      } else if (raw >= gameConfig.threshold) {
+        point = raw + diff * gameConfig.multiplier;
+      } else if (isSplit) {
+        point = raw + diff * gameConfig.splitMultiplier;
+      } else {
+        point = 2 * raw - avg;
+      }
 
       let text = Math.round(point) + ' pt';
       if (isStrike) {
         text += ' 【ストライク ✕】';
       } else if (isSpare) {
         text += ' 【スペア ╱】';
+      } else if (isSplit) {
+        text += ' 【スプリット 〇】';
       }
       display.textContent = text;
     }
@@ -787,6 +828,7 @@
       return null;
     }
 
+    // 全スコア計算＆テーブル更新
     function recalculateAll() {
       const miniTotalsContainer = document.getElementById('miniTotals');
       miniTotalsContainer.innerHTML = '';
@@ -799,13 +841,22 @@
 
           if (data && data.raw !== null && data.avg !== null) {
             let diff = data.raw - data.avg;
-            
+            let isFinal = (s === gameConfig.songCount - 1);
+
             let isStrike = (data.raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
             let isSpare = (data.raw >= gameConfig.threshold) && !isStrike;
+            let isSplit = (data.raw < gameConfig.threshold) && (diff >= gameConfig.splitThreshold);
 
-            let basePoint = (data.raw >= gameConfig.threshold)
-              ? (data.raw + diff * gameConfig.multiplier)
-              : (2 * data.raw - data.avg);
+            let basePoint = 0;
+            if (isFinal) {
+              basePoint = data.raw + diff * gameConfig.finalMultiplier;
+            } else if (data.raw >= gameConfig.threshold) {
+              basePoint = data.raw + diff * gameConfig.multiplier;
+            } else if (isSplit) {
+              basePoint = data.raw + diff * gameConfig.splitMultiplier;
+            } else {
+              basePoint = 2 * data.raw - data.avg;
+            }
 
             songResults.push({
               isEntered: true,
@@ -814,7 +865,9 @@
               raw: data.raw,
               avg: data.avg,
               isStrike: isStrike,
-              isSpare: isSpare
+              isSpare: isSpare,
+              isSplit: isSplit,
+              isFinal: isFinal
             });
           } else {
             songResults.push({
@@ -824,7 +877,9 @@
               raw: null,
               avg: null,
               isStrike: false,
-              isSpare: false
+              isSpare: false,
+              isSplit: false,
+              isFinal: false
             });
           }
         }
@@ -835,7 +890,8 @@
           let finalPoint = res.basePoint;
 
           if (res.isEntered) {
-            if (res.isStrike && (s + 1 < gameConfig.songCount)) {
+            // ストライクボーナス加算（最終曲を除く）
+            if (res.isStrike && !res.isFinal && (s + 1 < gameConfig.songCount)) {
               let nextRes = songResults[s + 1];
               if (nextRes.isEntered) {
                 let bonus = nextRes.diff * gameConfig.multiplier;
@@ -854,6 +910,8 @@
               symbol = " ✕";
             } else if (res.isSpare) {
               symbol = " ╱";
+            } else if (res.isSplit) {
+              symbol = " 〇";
             }
 
             const cell = document.querySelector(`.score-cell[data-team="${t}"][data-song="${s}"]`);
@@ -906,7 +964,7 @@
       }
     }
 
-    // 内訳モーダル画面 (素点合計・平均を追加)
+    // 内訳モーダル画面
     function openDetailModal() {
       const container = document.getElementById('modalBodyContainer');
       container.innerHTML = '';
@@ -919,7 +977,6 @@
         let enteredCount = 0;
         let totalFinalPoint = 0;
 
-        // 一旦計算用ループ
         for (let s = 0; s < gameConfig.songCount; s++) {
           const data = gameState[t][s];
           if (data && data.raw !== null && data.avg !== null) {
@@ -953,7 +1010,7 @@
               <th>平均差</th>
               <th>判定</th>
               <th>基本pt</th>
-              <th>ストライクボーナス</th>
+              <th>ボーナス</th>
               <th>小計</th>
             </tr>
           </thead>
@@ -970,17 +1027,27 @@
 
           if (data && data.raw !== null && data.avg !== null) {
             let diff = data.raw - data.avg;
+            let isFinal = (s === gameConfig.songCount - 1);
+
             let isStrike = (data.raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
             let isSpare = (data.raw >= gameConfig.threshold) && !isStrike;
+            let isSplit = (data.raw < gameConfig.threshold) && (diff >= gameConfig.splitThreshold);
 
-            let basePoint = (data.raw >= gameConfig.threshold)
-              ? (data.raw + diff * gameConfig.multiplier)
-              : (2 * data.raw - data.avg);
+            let basePoint = 0;
+            if (isFinal) {
+              basePoint = data.raw + diff * gameConfig.finalMultiplier;
+            } else if (data.raw >= gameConfig.threshold) {
+              basePoint = data.raw + diff * gameConfig.multiplier;
+            } else if (isSplit) {
+              basePoint = data.raw + diff * gameConfig.splitMultiplier;
+            } else {
+              basePoint = 2 * data.raw - data.avg;
+            }
 
             let bonus = 0;
             let bonusText = "-";
 
-            if (isStrike) {
+            if (isStrike && !isFinal) {
               if (s + 1 < gameConfig.songCount) {
                 let nextData = gameState[t][s + 1];
                 if (nextData && nextData.raw !== null && nextData.avg !== null) {
@@ -1004,6 +1071,9 @@
             let judgeText = "通常";
             if (isStrike) judgeText = "ストライク ✕";
             else if (isSpare) judgeText = "スペア ╱";
+            else if (isSplit) judgeText = "スプリット 〇";
+
+            if (isFinal) judgeText += " (最終)";
 
             tr.innerHTML = `
               <td>第${s + 1}曲</td>
@@ -1025,7 +1095,6 @@
           tbody.appendChild(tr);
         }
 
-        // tfoot に合計行・平均行を追加
         if (enteredCount > 0) {
           const diffSum = totalRaw - totalAvg;
           const diffAvg = diffSum / enteredCount;
