@@ -2,207 +2,187 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>簡易ポイント計算＆スコア表 (ストライク・スペア対応)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ポイント計算＆スコア表</title>
   <style>
-    body {
-      font-family: "Helvetica Neue", Arial, sans-serif;
-      padding: 20px;
-      max-width: 950px;
-      margin: 0 auto;
-      background-color: #f4f7f6;
-      color: #333;
+    * {
+      box-sizing: border-box;
     }
 
-    h1 {
-      text-align: center;
-      font-size: 24px;
-      margin-bottom: 20px;
+    html, body {
+      height: 100%;
+      height: 100dvh; /* iPhoneの動的ツールバーに対応 */
+      margin: 0;
+      padding: 0;
+      overflow: hidden; /* 縦スクロール禁止 */
+    }
+
+    body {
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      padding: 6px;
+      background-color: #f4f7f6;
+      color: #333;
+      display: flex;
+      flex-direction: column;
     }
 
     .card {
       background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      margin-bottom: 20px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+      margin-bottom: 6px;
+    }
+
+    /* ゲーム画面全体をフレックスボックス化 */
+    #gameScreen {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      gap: 6px;
+    }
+
+    .input-card {
+      flex: 0 0 auto;
+    }
+
+    .score-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 0;
+      min-height: 0; /* 高さの自動縮小を許可 */
+    }
+
+    .turn-info {
+      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 4px;
+      padding: 4px;
+      background-color: #eef2f5;
+      border-radius: 4px;
+      text-align: center;
+      border: 1px solid #bdc3c7;
+    }
+
+    .current-rule-badge {
+      text-align: center;
+      font-size: 10px;
+      color: #666;
+      margin-bottom: 6px;
+      background: #fdfefe;
+      padding: 2px 4px;
+      border: 1px dashed #ccc;
+      border-radius: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .form-row {
       display: flex;
-      gap: 15px;
-      margin-bottom: 15px;
-      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 4px;
     }
 
     .form-group {
       flex: 1;
-      min-width: 140px;
+      min-width: 0;
     }
 
     label {
       display: block;
       font-weight: bold;
-      margin-bottom: 5px;
-      font-size: 14px;
+      margin-bottom: 2px;
+      font-size: 11px;
     }
 
     input[type="number"], input[type="text"] {
       width: 100%;
-      padding: 10px;
-      box-sizing: border-box;
-      font-size: 15px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-
-    .team-name-inputs {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 10px;
-      margin-top: 10px;
-    }
-
-    .rule-box {
-      background-color: #f0f7ff;
-      border: 1px solid #b3d7ff;
-      padding: 15px;
-      border-radius: 8px;
-      margin-top: 15px;
-    }
-
-    .rule-box h3 {
-      margin-top: 0;
-      margin-bottom: 10px;
-      font-size: 16px;
-      color: #2c3e50;
-    }
-
-    .inline-inputs {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      font-weight: bold;
-      margin-top: 10px;
+      padding: 6px 8px;
       font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
     }
 
-    .inline-inputs input {
-      width: 80px;
+    .result-display {
+      font-size: 15px;
+      font-weight: bold;
+      color: #2c3e50;
+      margin: 4px 0;
+      background: #e8f4f8;
+      padding: 6px;
+      border-radius: 4px;
       text-align: center;
-    }
-
-    .rule-desc {
-      font-size: 12px;
-      color: #555;
-      margin-top: 4px;
-      margin-left: 5px;
     }
 
     .btn-main {
       background: #27ae60;
       color: white;
       border: none;
-      padding: 12px;
-      font-size: 18px;
+      padding: 8px;
+      font-size: 15px;
       font-weight: bold;
-      border-radius: 5px;
+      border-radius: 4px;
       cursor: pointer;
       width: 100%;
-      transition: background 0.2s;
-      margin-top: 15px;
+      margin-top: 2px;
     }
 
     .btn-main:hover {
       background: #219150;
     }
 
-    .turn-info {
-      font-weight: bold;
-      font-size: 18px;
-      margin-bottom: 15px;
-      padding: 10px;
-      background-color: #eef2f5;
-      border-radius: 5px;
-      text-align: center;
-      border: 2px solid #bdc3c7;
-    }
-
-    .current-rule-badge {
-      text-align: center;
-      font-size: 13px;
-      color: #666;
-      margin-bottom: 15px;
-      background: #fdfefe;
-      padding: 6px;
-      border: 1px dashed #ccc;
-      border-radius: 4px;
-    }
-
-    .result-display {
-      font-size: 20px;
-      font-weight: bold;
-      color: #2c3e50;
-      margin: 15px 0;
-      background: #e8f4f8;
-      padding: 12px;
-      border-radius: 5px;
-      text-align: center;
-    }
-
-    /* スコア表ヘッダーエリア */
+    /* タイトル横の常時表示合計バッジエリア */
     .score-header-container {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 10px;
+      justify-content: center;
+      margin-bottom: 4px;
     }
 
-    .score-header-container h2 {
-      margin: 0;
-    }
-
-    /* タイトル横の常時表示合計バッジ */
     .mini-totals-container {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       flex-wrap: wrap;
+      justify-content: center;
+      width: 100%;
     }
 
     .mini-total-badge {
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-size: 13px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
       font-weight: bold;
       color: white;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.15);
     }
 
     /* スコア表 */
     .table-container {
+      flex: 1;
       overflow-x: auto;
+      overflow-y: auto;
+      min-height: 0;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 10px;
       background: white;
       text-align: center;
     }
 
     th, td {
-      border: 2px solid #333;
-      padding: 8px 4px;
-      font-size: 14px;
-      min-width: 45px;
+      border: 1px solid #333;
+      padding: 5px 2px;
+      font-size: 12px;
+      min-width: 32px;
     }
 
     th {
       background: #eee;
+      font-size: 11px;
     }
 
     .score-cell {
@@ -217,15 +197,16 @@
     }
 
     .score-cell.selected-cell {
-      outline: 3px solid #27ae60 !important;
+      outline: 2px solid #27ae60 !important;
       background-color: #e8f8f5 !important;
       font-weight: bold;
     }
 
     .team-header {
-      width: 110px;
+      width: 75px;
       font-weight: bold;
       white-space: nowrap;
+      font-size: 11px;
     }
 
     .total-cell {
@@ -235,68 +216,88 @@
     }
 
     .note {
-      font-size: 12px;
+      font-size: 10px;
       color: #666;
-      margin-top: 8px;
+      margin-top: 3px;
       text-align: right;
+      flex: 0 0 auto;
     }
 
     .btn-action-container {
       display: flex;
-      gap: 10px;
-      margin-top: 15px;
+      gap: 6px;
+      margin-top: 4px;
+      flex: 0 0 auto;
+    }
+
+    .btn-info, .btn-sub, .btn-reset {
+      border: none;
+      padding: 8px 4px;
+      font-size: 11px;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+      flex: 1;
+      text-align: center;
+      color: white;
+    }
+
+    .btn-info { background: #3498db; }
+    .btn-info:hover { background: #2980b9; }
+
+    .btn-sub { background: #7f8c8d; }
+    .btn-sub:hover { background: #687475; }
+
+    .btn-reset { background: #e74c3c; }
+    .btn-reset:hover { background: #c0392b; }
+
+    /* ルール設定画面 */
+    #configScreen {
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    .team-name-inputs {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .rule-box {
+      background-color: #f0f7ff;
+      border: 1px solid #b3d7ff;
+      padding: 8px;
+      border-radius: 6px;
+      margin-top: 8px;
+    }
+
+    .rule-box h3 {
+      margin-top: 0;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: #2c3e50;
+    }
+
+    .inline-inputs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
       flex-wrap: wrap;
-    }
-
-    .btn-info {
-      background: #3498db;
-      color: white;
-      border: none;
-      padding: 10px;
-      font-size: 14px;
       font-weight: bold;
-      border-radius: 5px;
-      cursor: pointer;
-      flex: 1;
-      min-width: 140px;
+      margin-top: 6px;
+      font-size: 12px;
     }
 
-    .btn-info:hover {
-      background: #2980b9;
+    .inline-inputs input {
+      width: 60px;
+      text-align: center;
     }
 
-    .btn-sub {
-      background: #7f8c8d;
-      color: white;
-      border: none;
-      padding: 10px;
-      font-size: 14px;
-      font-weight: bold;
-      border-radius: 5px;
-      cursor: pointer;
-      flex: 1;
-      min-width: 140px;
-    }
-
-    .btn-sub:hover {
-      background: #687475;
-    }
-
-    .btn-reset {
-      background: #e74c3c;
-      color: white;
-      border: none;
-      padding: 10px;
-      font-size: 14px;
-      font-weight: bold;
-      border-radius: 5px;
-      cursor: pointer;
-      flex: 1;
-      min-width: 140px;
-    }
-
-    .btn-reset:hover {
-      background: #c0392b;
+    .rule-desc {
+      font-size: 10px;
+      color: #555;
+      margin-top: 2px;
     }
 
     /* モーダル (詳細・内訳画面) */
@@ -315,11 +316,11 @@
 
     .modal-content {
       background: white;
-      padding: 20px;
-      border-radius: 10px;
+      padding: 12px;
+      border-radius: 8px;
       max-width: 900px;
-      width: 92%;
-      max-height: 85vh;
+      width: 95%;
+      max-height: 90vh;
       overflow-y: auto;
       box-shadow: 0 5px 15px rgba(0,0,0,0.3);
     }
@@ -329,54 +330,48 @@
       justify-content: space-between;
       align-items: center;
       border-bottom: 2px solid #eee;
-      padding-bottom: 10px;
-      margin-bottom: 15px;
+      padding-bottom: 6px;
+      margin-bottom: 10px;
     }
 
     .modal-header h2 {
       margin: 0;
-      font-size: 20px;
+      font-size: 16px;
     }
 
     .btn-close {
       background: #95a5a6;
       color: white;
       border: none;
-      padding: 6px 15px;
+      padding: 4px 12px;
       font-weight: bold;
       border-radius: 4px;
       cursor: pointer;
     }
 
-    .btn-close:hover {
-      background: #7f8c8d;
-    }
-
     .detail-team-title {
-      font-size: 16px;
+      font-size: 14px;
       font-weight: bold;
-      margin-top: 15px;
-      margin-bottom: 8px;
+      margin-top: 10px;
+      margin-bottom: 4px;
     }
 
     .detail-table {
-      font-size: 13px;
-      margin-bottom: 15px;
+      font-size: 11px;
+      margin-bottom: 10px;
     }
 
     .detail-table th {
       background: #f8f9fa;
-      font-size: 12px;
+      font-size: 10px;
     }
   </style>
 </head>
 <body>
 
-  <h1>ポイント計算＆スコア表</h1>
-
   <!-- 1. ルール設定画面 -->
   <div id="configScreen" class="card">
-    <h2>ルール設定</h2>
+    <h2 style="margin-top:0; font-size:18px;">ルール設定</h2>
 
     <div class="form-row">
       <div class="form-group">
@@ -415,7 +410,7 @@
         ③ ストライク [✕] 判定閾値: 【 (素点 － 全国平均) × 通常倍率 】 ≧
         <input type="number" id="strikeThresholdInput" value="10" step="1"> 点
       </div>
-      <div class="rule-desc">※素点①以上かつ③達成で「ストライク ✕」(次曲ボーナスあり)。③未達成なら「スペア ╱」(ボーナスのみ)。</div>
+      <div class="rule-desc">※素点①以上かつ③達成で「ストライク ✕」(次曲ボーナスあり)。③未達成なら「スペア ╱」。</div>
 
       <div class="inline-inputs">
         ④ 次曲90点以上時の追加ボーナス倍率:
@@ -428,11 +423,11 @@
   </div>
 
 
-  <!-- 2. ゲームメイン画面 -->
+  <!-- 2. ゲームメイン画面（1画面フィット構造） -->
   <div id="gameScreen" style="display: none;">
     
     <!-- 計算＆入力エリア -->
-    <div class="card">
+    <div class="card input-card">
       <div class="turn-info">
         編集対象: <span id="currentTeamText">-</span> (第<span id="currentRoundText">1</span>曲目)
       </div>
@@ -442,17 +437,17 @@
       <div class="form-row">
         <div class="form-group">
           <label for="rawScore">素点:</label>
-          <input type="number" id="rawScore" placeholder="素点を入力" oninput="calculatePoint()">
+          <input type="number" id="rawScore" placeholder="素点" oninput="calculatePoint()">
         </div>
         <div class="form-group">
           <label for="avgScore">平均点:</label>
-          <input type="number" id="avgScore" placeholder="全国平均を入力" oninput="calculatePoint()">
+          <input type="number" id="avgScore" placeholder="全国平均" oninput="calculatePoint()">
         </div>
       </div>
 
       <!-- ポイント表示欄 -->
       <div class="result-display">
-        ポイント表示: <span id="calculatedPoint">-</span>
+        ポイント: <span id="calculatedPoint">-</span>
       </div>
 
       <!-- セットボタン -->
@@ -460,10 +455,9 @@
     </div>
 
     <!-- スコア表エリア -->
-    <div class="card">
+    <div class="card score-card">
       <div class="score-header-container">
-        <h2>スコア表</h2>
-        <!-- タイトル横に常時表示される各チームの合計点 -->
+        <!-- タイトル横（画面上部）に常時表示される各チームの合計点バッジ -->
         <div id="miniTotals" class="mini-totals-container"></div>
       </div>
 
@@ -480,12 +474,12 @@
         </table>
       </div>
 
-      <div class="note">※ ✕：ストライク、╱：スペア。<b>マス目をクリックすると過去の素点・平均点を打ち直せます。</b></div>
+      <div class="note">※ ✕：ストライク、╱：スペア。<b>マス目クリックで編集</b></div>
 
       <div class="btn-action-container">
-        <button class="btn-info" onclick="openDetailModal()">📊 内訳を見る</button>
-        <button class="btn-sub" onclick="backToConfig()">⚙️ ルール設定に戻る</button>
-        <button class="btn-reset" onclick="resetGame()">スコアをクリア</button>
+        <button class="btn-info" onclick="openDetailModal()">📊 内訳</button>
+        <button class="btn-sub" onclick="backToConfig()">⚙️ ルール</button>
+        <button class="btn-reset" onclick="resetGame()">クリア</button>
       </div>
     </div>
 
@@ -505,6 +499,8 @@
   </div>
 
   <script>
+    const STORAGE_KEY = 'bowling_score_app_data';
+
     const TEAM_COLORS = [
       '#e74c3c', '#2980b9', '#27ae60', '#8e44ad', 
       '#e67e22', '#16a085', '#d35400', '#2c3e50'
@@ -528,7 +524,57 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       renderTeamNameInputs();
+      loadFromLocalStorage();
     });
+
+    function saveToLocalStorage() {
+      const dataToSave = {
+        gameConfig: gameConfig,
+        gameState: gameState,
+        isGameActive: (document.getElementById('gameScreen').style.display === 'flex')
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+    }
+
+    function loadFromLocalStorage() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return;
+
+      try {
+        const data = JSON.parse(saved);
+        if (data && data.gameConfig && data.gameState) {
+          gameConfig = data.gameConfig;
+          gameState = data.gameState;
+
+          document.getElementById('teamCountInput').value = gameConfig.teamCount;
+          document.getElementById('songCountInput').value = gameConfig.songCount;
+          document.getElementById('thresholdInput').value = gameConfig.threshold;
+          document.getElementById('multiplierInput').value = gameConfig.multiplier;
+          document.getElementById('strikeThresholdInput').value = gameConfig.strikeThreshold;
+          document.getElementById('strikeBonusMultInput').value = gameConfig.strikeBonusMult;
+
+          renderTeamNameInputs();
+          const nameInputs = document.querySelectorAll('#teamNamesContainer input');
+          gameConfig.teamNames.forEach((name, idx) => {
+            if (nameInputs[idx]) nameInputs[idx].value = name;
+          });
+
+          if (data.isGameActive) {
+            document.getElementById('ruleBadgeText').textContent = 
+              `【現在ルール】素点${gameConfig.threshold}点以上で${gameConfig.multiplier}倍 | ✕: 平均差×${gameConfig.multiplier} ≧ ${gameConfig.strikeThreshold}点`;
+
+            buildScoreTable();
+            document.getElementById('configScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'flex';
+
+            selectCell(0, 0);
+            recalculateAll();
+          }
+        }
+      } catch (e) {
+        console.error('保存データの読み込みに失敗しました', e);
+      }
+    }
 
     function renderTeamNameInputs() {
       const container = document.getElementById('teamNamesContainer');
@@ -561,32 +607,33 @@
       gameConfig.teamNames = Array.from(nameInputs).map((input, idx) => input.value.trim() || `チーム${idx + 1}`);
 
       document.getElementById('ruleBadgeText').textContent = 
-        `【現在ルール】素点${gameConfig.threshold}点以上で${gameConfig.multiplier}倍 | ストライク[✕]: 平均差×${gameConfig.multiplier} ≧ ${gameConfig.strikeThreshold}点 | スペア[╱]: 90点以上`;
+        `【現在ルール】素点${gameConfig.threshold}点以上で${gameConfig.multiplier}倍 | ✕: 平均差×${gameConfig.multiplier} ≧ ${gameConfig.strikeThreshold}点`;
 
-      // データ構造初期化
-      gameState = [];
-      for (let t = 0; t < gameConfig.teamCount; t++) {
-        let songs = [];
-        for (let s = 0; s < gameConfig.songCount; s++) {
-          songs.push({ raw: null, avg: null });
+      if (!gameState || gameState.length !== gameConfig.teamCount || (gameState[0] && gameState[0].length !== gameConfig.songCount)) {
+        gameState = [];
+        for (let t = 0; t < gameConfig.teamCount; t++) {
+          let songs = [];
+          for (let s = 0; s < gameConfig.songCount; s++) {
+            songs.push({ raw: null, avg: null });
+          }
+          gameState.push(songs);
         }
-        gameState.push(songs);
       }
 
       buildScoreTable();
 
       document.getElementById('configScreen').style.display = 'none';
-      document.getElementById('gameScreen').style.display = 'block';
+      document.getElementById('gameScreen').style.display = 'flex';
 
       selectCell(0, 0);
       recalculateAll();
+      saveToLocalStorage();
     }
 
     function backToConfig() {
-      if (confirm('ルール設定に戻りますか？（現在のスコア表はリセットされます）')) {
-        document.getElementById('gameScreen').style.display = 'none';
-        document.getElementById('configScreen').style.display = 'block';
-      }
+      document.getElementById('gameScreen').style.display = 'none';
+      document.getElementById('configScreen').style.display = 'block';
+      saveToLocalStorage();
     }
 
     function buildScoreTable() {
@@ -644,7 +691,7 @@
       }
 
       const data = gameState[t][s];
-      if (data.raw !== null && data.avg !== null) {
+      if (data && data.raw !== null && data.avg !== null) {
         document.getElementById('rawScore').value = data.raw;
         document.getElementById('avgScore').value = data.avg;
       } else {
@@ -701,6 +748,7 @@
       };
 
       recalculateAll();
+      saveToLocalStorage();
 
       const next = getNextTurnInfo();
       if (next) {
@@ -714,7 +762,7 @@
       for (let song = 0; song < gameConfig.songCount; song++) {
         for (let t = 0; t < gameConfig.teamCount; t++) {
           const data = gameState[t][song];
-          if (data.raw === null) {
+          if (!data || data.raw === null) {
             return { teamIndex: t, songIndex: song };
           }
         }
@@ -722,7 +770,6 @@
       return null;
     }
 
-    // 全スコア計算＆画面・常時ミニ合計表示の更新
     function recalculateAll() {
       const miniTotalsContainer = document.getElementById('miniTotals');
       miniTotalsContainer.innerHTML = '';
@@ -730,11 +777,10 @@
       for (let t = 0; t < gameConfig.teamCount; t++) {
         let songResults = [];
 
-        // Step 1: 単体計算
         for (let s = 0; s < gameConfig.songCount; s++) {
-          let data = gameState[t][s];
+          let data = gameState[t] ? gameState[t][s] : null;
 
-          if (data.raw !== null && data.avg !== null) {
+          if (data && data.raw !== null && data.avg !== null) {
             let diff = data.raw - data.avg;
             
             let isStrike = (data.raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
@@ -766,7 +812,6 @@
           }
         }
 
-        // Step 2: ボーナス加算と最終得点決定
         let totalScore = 0;
         for (let s = 0; s < gameConfig.songCount; s++) {
           let res = songResults[s];
@@ -808,13 +853,11 @@
 
         let roundedTotal = Math.round(totalScore);
 
-        // テーブル内の合計更新
         const totalCell = document.getElementById(`total-team-${t}`);
         if (totalCell) {
           totalCell.textContent = roundedTotal;
         }
 
-        // スコア表タイトル横のミニ合計バッジ生成
         const color = TEAM_COLORS[t % TEAM_COLORS.length];
         const badge = document.createElement('div');
         badge.className = 'mini-total-badge';
@@ -839,14 +882,13 @@
         roundText.textContent = song + 1;
       }
 
-      if (gameState[team][song].raw !== null) {
+      if (gameState[team] && gameState[team][song] && gameState[team][song].raw !== null) {
         setBtn.textContent = '更新';
       } else {
         setBtn.textContent = 'セット';
       }
     }
 
-    // モーダル (詳細内訳表示)
     function openDetailModal() {
       const container = document.getElementById('modalBodyContainer');
       container.innerHTML = '';
@@ -884,7 +926,7 @@
           const data = gameState[t][s];
           const tr = document.createElement('tr');
 
-          if (data.raw !== null && data.avg !== null) {
+          if (data && data.raw !== null && data.avg !== null) {
             let diff = data.raw - data.avg;
             let isStrike = (data.raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
             let isSpare = (data.raw >= gameConfig.threshold) && !isStrike;
@@ -899,7 +941,7 @@
             if (isStrike) {
               if (s + 1 < gameConfig.songCount) {
                 let nextData = gameState[t][s + 1];
-                if (nextData.raw !== null && nextData.avg !== null) {
+                if (nextData && nextData.raw !== null && nextData.avg !== null) {
                   let nextDiff = nextData.raw - nextData.avg;
                   bonus = nextDiff * gameConfig.multiplier;
                   if (nextData.raw >= gameConfig.threshold) {
@@ -959,6 +1001,7 @@
       }
       selectCell(0, 0);
       recalculateAll();
+      saveToLocalStorage();
     }
   </script>
 </body>
