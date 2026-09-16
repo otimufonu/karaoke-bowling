@@ -126,6 +126,7 @@
       background-color: #eef2f5;
       border-radius: 5px;
       text-align: center;
+      border: 2px solid #bdc3c7;
     }
 
     .current-rule-badge {
@@ -148,6 +149,36 @@
       padding: 12px;
       border-radius: 5px;
       text-align: center;
+    }
+
+    /* スコア表ヘッダーエリア */
+    .score-header-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .score-header-container h2 {
+      margin: 0;
+    }
+
+    /* タイトル横の常時表示合計バッジ */
+    .mini-totals-container {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .mini-total-badge {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: bold;
+      color: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     }
 
     /* スコア表 */
@@ -177,16 +208,18 @@
     .score-cell {
       cursor: pointer;
       background-color: #fff;
-      transition: background-color 0.2s;
+      transition: background-color 0.2s, outline 0.2s;
+      user-select: none;
     }
 
     .score-cell:hover {
       background-color: #f0f7ff;
     }
 
-    .score-cell:focus {
-      outline: 2px solid #3498db;
-      background-color: #e8f4f8;
+    .score-cell.selected-cell {
+      outline: 3px solid #27ae60 !important;
+      background-color: #e8f8f5 !important;
+      font-weight: bold;
     }
 
     .team-header {
@@ -204,7 +237,7 @@
     .note {
       font-size: 12px;
       color: #666;
-      margin-top: 5px;
+      margin-top: 8px;
       text-align: right;
     }
 
@@ -212,6 +245,24 @@
       display: flex;
       gap: 10px;
       margin-top: 15px;
+      flex-wrap: wrap;
+    }
+
+    .btn-info {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 10px;
+      font-size: 14px;
+      font-weight: bold;
+      border-radius: 5px;
+      cursor: pointer;
+      flex: 1;
+      min-width: 140px;
+    }
+
+    .btn-info:hover {
+      background: #2980b9;
     }
 
     .btn-sub {
@@ -224,6 +275,7 @@
       border-radius: 5px;
       cursor: pointer;
       flex: 1;
+      min-width: 140px;
     }
 
     .btn-sub:hover {
@@ -240,10 +292,81 @@
       border-radius: 5px;
       cursor: pointer;
       flex: 1;
+      min-width: 140px;
     }
 
     .btn-reset:hover {
       background: #c0392b;
+    }
+
+    /* モーダル (詳細・内訳画面) */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 900px;
+      width: 92%;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 10px;
+      margin-bottom: 15px;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .btn-close {
+      background: #95a5a6;
+      color: white;
+      border: none;
+      padding: 6px 15px;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .btn-close:hover {
+      background: #7f8c8d;
+    }
+
+    .detail-team-title {
+      font-size: 16px;
+      font-weight: bold;
+      margin-top: 15px;
+      margin-bottom: 8px;
+    }
+
+    .detail-table {
+      font-size: 13px;
+      margin-bottom: 15px;
+    }
+
+    .detail-table th {
+      background: #f8f9fa;
+      font-size: 12px;
     }
   </style>
 </head>
@@ -311,7 +434,7 @@
     <!-- 計算＆入力エリア -->
     <div class="card">
       <div class="turn-info">
-        現在の順番: <span id="currentTeamText">-</span> (第<span id="currentRoundText">1</span>曲目)
+        編集対象: <span id="currentTeamText">-</span> (第<span id="currentRoundText">1</span>曲目)
       </div>
 
       <div class="current-rule-badge" id="ruleBadgeText"></div>
@@ -333,12 +456,17 @@
       </div>
 
       <!-- セットボタン -->
-      <button class="btn-main" onclick="setScore()">セット</button>
+      <button class="btn-main" id="setBtn" onclick="setScore()">セット</button>
     </div>
 
     <!-- スコア表エリア -->
     <div class="card">
-      <h2>スコア表</h2>
+      <div class="score-header-container">
+        <h2>スコア表</h2>
+        <!-- タイトル横に常時表示される各チームの合計点 -->
+        <div id="miniTotals" class="mini-totals-container"></div>
+      </div>
+
       <div class="table-container">
         <table>
           <thead>
@@ -352,14 +480,28 @@
         </table>
       </div>
 
-      <div class="note">※ ✕：ストライク、╱：スペア。マス目を直接クリックして手動修正も可能です。</div>
+      <div class="note">※ ✕：ストライク、╱：スペア。<b>マス目をクリックすると過去の素点・平均点を打ち直せます。</b></div>
 
       <div class="btn-action-container">
+        <button class="btn-info" onclick="openDetailModal()">📊 内訳を見る</button>
         <button class="btn-sub" onclick="backToConfig()">⚙️ ルール設定に戻る</button>
         <button class="btn-reset" onclick="resetGame()">スコアをクリア</button>
       </div>
     </div>
 
+  </div>
+
+  <!-- 3. 内訳詳細モーダル画面 -->
+  <div id="detailModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>スコア詳細・内訳</h2>
+        <button class="btn-close" onclick="closeDetailModal()">閉じる</button>
+      </div>
+      <div id="modalBodyContainer">
+        <!-- JSで内訳テーブルを動的生成 -->
+      </div>
+    </div>
   </div>
 
   <script>
@@ -378,8 +520,11 @@
       strikeBonusMult: 1.3
     };
 
-    // スコア保持配列 [teamIndex][songIndex] = { raw, avg, manual }
+    // スコア保持配列 [teamIndex][songIndex] = { raw, avg }
     let gameState = [];
+    
+    // 現在選択されているセル { team, song }
+    let selectedCell = { team: 0, song: 0 };
 
     document.addEventListener('DOMContentLoaded', () => {
       renderTeamNameInputs();
@@ -423,7 +568,7 @@
       for (let t = 0; t < gameConfig.teamCount; t++) {
         let songs = [];
         for (let s = 0; s < gameConfig.songCount; s++) {
-          songs.push({ raw: null, avg: null, manual: null });
+          songs.push({ raw: null, avg: null });
         }
         gameState.push(songs);
       }
@@ -433,7 +578,7 @@
       document.getElementById('configScreen').style.display = 'none';
       document.getElementById('gameScreen').style.display = 'block';
 
-      clearInputs();
+      selectCell(0, 0);
       recalculateAll();
     }
 
@@ -470,17 +615,10 @@
         for (let s = 0; s < gameConfig.songCount; s++) {
           const td = document.createElement('td');
           td.className = 'score-cell';
-          td.contentEditable = 'true';
           td.dataset.team = t;
           td.dataset.song = s;
 
-          td.addEventListener('input', (e) => onCellInput(t, s, e.target));
-          td.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              td.blur();
-            }
-          });
+          td.addEventListener('click', () => selectCell(t, s));
           tr.appendChild(td);
         }
 
@@ -494,7 +632,30 @@
       }
     }
 
-    // ポイントリアルタイム計算（単体）
+    function selectCell(t, s) {
+      selectedCell = { team: t, song: s };
+
+      document.querySelectorAll('.score-cell').forEach(cell => {
+        cell.classList.remove('selected-cell');
+      });
+      const targetCell = document.querySelector(`.score-cell[data-team="${t}"][data-song="${s}"]`);
+      if (targetCell) {
+        targetCell.classList.add('selected-cell');
+      }
+
+      const data = gameState[t][s];
+      if (data.raw !== null && data.avg !== null) {
+        document.getElementById('rawScore').value = data.raw;
+        document.getElementById('avgScore').value = data.avg;
+      } else {
+        document.getElementById('rawScore').value = '';
+        document.getElementById('avgScore').value = '';
+      }
+
+      updateTurnDisplay();
+      calculatePoint();
+    }
+
     function calculatePoint() {
       const rawInput = document.getElementById('rawScore').value;
       const avgInput = document.getElementById('avgScore').value;
@@ -509,16 +670,10 @@
       const avg = parseFloat(avgInput);
       const diff = raw - avg;
 
-      // ストライク＆スペア判定
       const isStrike = (raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
       const isSpare = (raw >= gameConfig.threshold) && !isStrike;
 
-      let point = 0;
-      if (raw >= gameConfig.threshold) {
-        point = raw + diff * gameConfig.multiplier;
-      } else {
-        point = 2 * raw - avg;
-      }
+      let point = (raw >= gameConfig.threshold) ? (raw + diff * gameConfig.multiplier) : (2 * raw - avg);
 
       let text = Math.round(point) + ' pt';
       if (isStrike) {
@@ -529,52 +684,37 @@
       display.textContent = text;
     }
 
-    // 「セット」ボタン処理
     function setScore() {
       const rawInput = document.getElementById('rawScore').value;
       const avgInput = document.getElementById('avgScore').value;
 
       if (rawInput === '' || avgInput === '') {
-        alert('素点と平均点の両方を入力してください。');
+        alert('素点と平均点を入力をしてください。');
         return;
       }
 
-      const turnInfo = getNextTurnInfo();
-      if (!turnInfo) {
-        alert('全チームのスコアがすべて埋まっています。');
-        return;
-      }
+      const { team, song } = selectedCell;
 
-      gameState[turnInfo.teamIndex][turnInfo.songIndex] = {
+      gameState[team][song] = {
         raw: parseFloat(rawInput),
-        avg: parseFloat(avgInput),
-        manual: null
+        avg: parseFloat(avgInput)
       };
 
       recalculateAll();
-      clearInputs();
-    }
 
-    // マス直接手動編集時のハンドラ
-    function onCellInput(t, s, cellDOM) {
-      let text = cellDOM.textContent.trim().replace(/[✕❌X/╱]/g, "").trim();
-      if (text === "") {
-        gameState[t][s] = { raw: null, avg: null, manual: null };
+      const next = getNextTurnInfo();
+      if (next) {
+        selectCell(next.teamIndex, next.songIndex);
       } else {
-        let val = parseFloat(text);
-        if (!isNaN(val)) {
-          gameState[t][s] = { raw: null, avg: null, manual: val };
-        }
+        updateTurnDisplay();
       }
-      recalculateAll();
     }
 
-    // 次にスコアを入れるべきターンを取得
     function getNextTurnInfo() {
       for (let song = 0; song < gameConfig.songCount; song++) {
         for (let t = 0; t < gameConfig.teamCount; t++) {
           const data = gameState[t][song];
-          if (data.raw === null && data.manual === null) {
+          if (data.raw === null) {
             return { teamIndex: t, songIndex: song };
           }
         }
@@ -582,26 +722,19 @@
       return null;
     }
 
-    // 全スコア再計算・ストライク/スペア処理・画面反映
+    // 全スコア計算＆画面・常時ミニ合計表示の更新
     function recalculateAll() {
+      const miniTotalsContainer = document.getElementById('miniTotals');
+      miniTotalsContainer.innerHTML = '';
+
       for (let t = 0; t < gameConfig.teamCount; t++) {
         let songResults = [];
 
-        // Step 1: 各曲の単体計算およびストライク/スペア判定
+        // Step 1: 単体計算
         for (let s = 0; s < gameConfig.songCount; s++) {
           let data = gameState[t][s];
 
-          if (data.manual !== null) {
-            songResults.push({
-              isEntered: true,
-              isManual: true,
-              basePoint: data.manual,
-              diff: 0,
-              raw: null,
-              isStrike: false,
-              isSpare: false
-            });
-          } else if (data.raw !== null && data.avg !== null) {
+          if (data.raw !== null && data.avg !== null) {
             let diff = data.raw - data.avg;
             
             let isStrike = (data.raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
@@ -613,37 +746,36 @@
 
             songResults.push({
               isEntered: true,
-              isManual: false,
               basePoint: basePoint,
               diff: diff,
               raw: data.raw,
+              avg: data.avg,
               isStrike: isStrike,
               isSpare: isSpare
             });
           } else {
             songResults.push({
               isEntered: false,
-              isManual: false,
               basePoint: 0,
               diff: 0,
               raw: null,
+              avg: null,
               isStrike: false,
               isSpare: false
             });
           }
         }
 
-        // Step 2: ストライクボーナスの計算と最終ポイント決定
+        // Step 2: ボーナス加算と最終得点決定
         let totalScore = 0;
         for (let s = 0; s < gameConfig.songCount; s++) {
           let res = songResults[s];
           let finalPoint = res.basePoint;
 
           if (res.isEntered) {
-            // 前曲(s)がストライクで、次曲(s+1)が入力されている場合にのみボーナスを加算
             if (res.isStrike && (s + 1 < gameConfig.songCount)) {
               let nextRes = songResults[s + 1];
-              if (nextRes.isEntered && !nextRes.isManual) {
+              if (nextRes.isEntered) {
                 let bonus = nextRes.diff * gameConfig.multiplier;
                 if (nextRes.raw >= gameConfig.threshold) {
                   bonus *= gameConfig.strikeBonusMult;
@@ -655,7 +787,6 @@
             let roundedPoint = Math.round(finalPoint);
             totalScore += roundedPoint;
 
-            // 記号の決定（ストライク: ✕ / スペア: ╱）
             let symbol = "";
             if (res.isStrike) {
               symbol = " ✕";
@@ -663,65 +794,170 @@
               symbol = " ╱";
             }
 
-            // DOM更新
             const cell = document.querySelector(`.score-cell[data-team="${t}"][data-song="${s}"]`);
-            if (cell && document.activeElement !== cell) {
+            if (cell) {
               cell.textContent = roundedPoint + symbol;
             }
           } else {
             const cell = document.querySelector(`.score-cell[data-team="${t}"][data-song="${s}"]`);
-            if (cell && document.activeElement !== cell) {
+            if (cell) {
               cell.textContent = "";
             }
           }
         }
 
-        // 合計表示の更新
+        let roundedTotal = Math.round(totalScore);
+
+        // テーブル内の合計更新
         const totalCell = document.getElementById(`total-team-${t}`);
         if (totalCell) {
-          totalCell.textContent = Math.round(totalScore);
+          totalCell.textContent = roundedTotal;
         }
-      }
 
-      updateTurnDisplay();
+        // スコア表タイトル横のミニ合計バッジ生成
+        const color = TEAM_COLORS[t % TEAM_COLORS.length];
+        const badge = document.createElement('div');
+        badge.className = 'mini-total-badge';
+        badge.style.backgroundColor = color;
+        badge.textContent = `${gameConfig.teamNames[t]}: ${roundedTotal} pt`;
+        miniTotalsContainer.appendChild(badge);
+      }
     }
 
-    // 順番（ターン）表示更新
     function updateTurnDisplay() {
-      const turnInfo = getNextTurnInfo();
+      const { team, song } = selectedCell;
       const teamText = document.getElementById('currentTeamText');
       const roundText = document.getElementById('currentRoundText');
-
-      if (!turnInfo) {
-        teamText.textContent = '全ゲーム終了';
-        teamText.style.color = '#27ae60';
-        roundText.textContent = '-';
-        return;
-      }
+      const setBtn = document.getElementById('setBtn');
 
       const rows = document.querySelectorAll('#scoreTbody tr');
-      const targetRow = rows[turnInfo.teamIndex];
-      const teamNameHeader = targetRow.querySelector('.team-header');
+      const targetRow = rows[team];
+      if (targetRow) {
+        const teamNameHeader = targetRow.querySelector('.team-header');
+        teamText.textContent = teamNameHeader.textContent;
+        teamText.style.color = teamNameHeader.style.color;
+        roundText.textContent = song + 1;
+      }
 
-      teamText.textContent = teamNameHeader.textContent;
-      teamText.style.color = teamNameHeader.style.color;
-      roundText.textContent = turnInfo.songIndex + 1;
+      if (gameState[team][song].raw !== null) {
+        setBtn.textContent = '更新';
+      } else {
+        setBtn.textContent = 'セット';
+      }
     }
 
-    function clearInputs() {
-      document.getElementById('rawScore').value = '';
-      document.getElementById('avgScore').value = '';
-      document.getElementById('calculatedPoint').textContent = '-';
+    // モーダル (詳細内訳表示)
+    function openDetailModal() {
+      const container = document.getElementById('modalBodyContainer');
+      container.innerHTML = '';
+
+      for (let t = 0; t < gameConfig.teamCount; t++) {
+        const color = TEAM_COLORS[t % TEAM_COLORS.length];
+        
+        const title = document.createElement('div');
+        title.className = 'detail-team-title';
+        title.style.color = color;
+        title.textContent = `■ ${gameConfig.teamNames[t]}`;
+        container.appendChild(title);
+
+        const table = document.createElement('table');
+        table.className = 'detail-table';
+        table.innerHTML = `
+          <thead>
+            <tr>
+              <th>曲</th>
+              <th>素点</th>
+              <th>全国平均</th>
+              <th>平均差</th>
+              <th>判定</th>
+              <th>基本pt</th>
+              <th>ストライクボーナス</th>
+              <th>小計</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        `;
+
+        const tbody = table.querySelector('tbody');
+
+        for (let s = 0; s < gameConfig.songCount; s++) {
+          const data = gameState[t][s];
+          const tr = document.createElement('tr');
+
+          if (data.raw !== null && data.avg !== null) {
+            let diff = data.raw - data.avg;
+            let isStrike = (data.raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
+            let isSpare = (data.raw >= gameConfig.threshold) && !isStrike;
+
+            let basePoint = (data.raw >= gameConfig.threshold)
+              ? (data.raw + diff * gameConfig.multiplier)
+              : (2 * data.raw - data.avg);
+
+            let bonus = 0;
+            let bonusText = "-";
+
+            if (isStrike) {
+              if (s + 1 < gameConfig.songCount) {
+                let nextData = gameState[t][s + 1];
+                if (nextData.raw !== null && nextData.avg !== null) {
+                  let nextDiff = nextData.raw - nextData.avg;
+                  bonus = nextDiff * gameConfig.multiplier;
+                  if (nextData.raw >= gameConfig.threshold) {
+                    bonus *= gameConfig.strikeBonusMult;
+                  }
+                  bonusText = `+${Math.round(bonus)} pt`;
+                } else {
+                  bonusText = "(次曲待ち)";
+                }
+              } else {
+                bonusText = "(最終曲)";
+              }
+            }
+
+            let finalPoint = Math.round(basePoint + bonus);
+
+            let judgeText = "通常";
+            if (isStrike) judgeText = "ストライク ✕";
+            else if (isSpare) judgeText = "スペア ╱";
+
+            tr.innerHTML = `
+              <td>第${s + 1}曲</td>
+              <td>${data.raw} 点</td>
+              <td>${data.avg} 点</td>
+              <td>${diff > 0 ? '+' : ''}${diff.toFixed(1)}</td>
+              <td><b>${judgeText}</b></td>
+              <td>${Math.round(basePoint)} pt</td>
+              <td>${bonusText}</td>
+              <td><b>${finalPoint} pt</b></td>
+            `;
+          } else {
+            tr.innerHTML = `
+              <td>第${s + 1}曲</td>
+              <td colspan="7" style="color: #999;">- 未入力 -</td>
+            `;
+          }
+
+          tbody.appendChild(tr);
+        }
+
+        container.appendChild(table);
+      }
+
+      document.getElementById('detailModal').style.display = 'flex';
+    }
+
+    function closeDetailModal() {
+      document.getElementById('detailModal').style.display = 'none';
     }
 
     function resetGame() {
       if (!confirm('スコア表の数字をクリアしますか？')) return;
       for (let t = 0; t < gameConfig.teamCount; t++) {
         for (let s = 0; s < gameConfig.songCount; s++) {
-          gameState[t][s] = { raw: null, avg: null, manual: null };
+          gameState[t][s] = { raw: null, avg: null };
         }
       }
-      clearInputs();
+      selectCell(0, 0);
       recalculateAll();
     }
   </script>
