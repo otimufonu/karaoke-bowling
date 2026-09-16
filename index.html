@@ -105,17 +105,6 @@
       border-radius: 4px;
     }
 
-    .result-display {
-      font-size: 15px;
-      font-weight: bold;
-      color: #2c3e50;
-      margin: 4px 0;
-      background: #e8f4f8;
-      padding: 6px;
-      border-radius: 4px;
-      text-align: center;
-    }
-
     .btn-main {
       background: #27ae60;
       color: white;
@@ -126,7 +115,7 @@
       border-radius: 4px;
       cursor: pointer;
       width: 100%;
-      margin-top: 2px;
+      margin-top: 4px;
     }
 
     .btn-main:hover {
@@ -473,17 +462,12 @@
       <div class="form-row">
         <div class="form-group">
           <label for="rawScore">素点:</label>
-          <input type="number" id="rawScore" placeholder="素点" oninput="calculatePoint()">
+          <input type="number" id="rawScore" placeholder="素点">
         </div>
         <div class="form-group">
           <label for="avgScore">平均点:</label>
-          <input type="number" id="avgScore" placeholder="全国平均" oninput="calculatePoint()">
+          <input type="number" id="avgScore" placeholder="全国平均">
         </div>
-      </div>
-
-      <!-- ポイント表示欄 -->
-      <div class="result-display">
-        ポイント: <span id="calculatedPoint">-</span>
       </div>
 
       <!-- セットボタン -->
@@ -744,25 +728,25 @@
       }
 
       updateTurnDisplay();
-      calculatePoint();
     }
 
-    // リアルタイム単体計算表示
-    function calculatePoint() {
+    // セットボタンクリック時の処理（ポップアップ表示）
+    function setScore() {
       const rawInput = document.getElementById('rawScore').value;
       const avgInput = document.getElementById('avgScore').value;
-      const display = document.getElementById('calculatedPoint');
 
       if (rawInput === '' || avgInput === '') {
-        display.textContent = '-';
+        alert('素点と平均点を入力をしてください。');
         return;
       }
 
+      const { team, song } = selectedCell;
       const raw = parseFloat(rawInput);
       const avg = parseFloat(avgInput);
       const diff = raw - avg;
-      const isFinal = (selectedCell.song === gameConfig.songCount - 1);
+      const isFinal = (song === gameConfig.songCount - 1);
 
+      // 役の判定
       const isStrike = (raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
       const isSpare = (raw >= gameConfig.threshold) && !isStrike;
       const isSplit = (raw < gameConfig.threshold) && (diff >= gameConfig.splitThreshold);
@@ -778,31 +762,27 @@
         point = 2 * raw - avg;
       }
 
-      let text = Math.round(point) + ' pt';
-      if (isStrike) {
-        text += ' 【ストライク ✕】';
-      } else if (isSpare) {
-        text += ' 【スペア ╱】';
-      } else if (isSplit) {
-        text += ' 【スプリット 〇】';
+      const roundedPoint = Math.round(point);
+
+      let roleText = '';
+      if (isStrike) roleText = '【ストライク ✕】';
+      else if (isSpare) roleText = '【スペア ╱】';
+      else if (isSplit) roleText = '【スプリット 〇】';
+
+      // ポップアップメッセージの作成
+      let msg = `【セット完了】\n${gameConfig.teamNames[team]} (第${song + 1}曲目)\n獲得ポイント: ${roundedPoint} pt`;
+      if (roleText) {
+        msg += ` ${roleText}`;
       }
-      display.textContent = text;
-    }
-
-    function setScore() {
-      const rawInput = document.getElementById('rawScore').value;
-      const avgInput = document.getElementById('avgScore').value;
-
-      if (rawInput === '' || avgInput === '') {
-        alert('素点と平均点を入力をしてください。');
-        return;
+      if (isStrike && !isFinal) {
+        msg += `\n※ストライクボーナスは次曲入力後に加算されます`;
       }
 
-      const { team, song } = selectedCell;
+      alert(msg);
 
       gameState[team][song] = {
-        raw: parseFloat(rawInput),
-        avg: parseFloat(avgInput)
+        raw: raw,
+        avg: avg
       };
 
       recalculateAll();
