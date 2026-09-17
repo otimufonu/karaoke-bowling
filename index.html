@@ -158,18 +158,19 @@
     }
 
     table {
-      width: 100%;
       border-collapse: collapse;
       background: white;
       text-align: center;
+      table-layout: fixed;
+      width: max-content;
     }
 
     th, td {
       border: 1px solid #333;
       padding: 0;
       font-size: 12px;
-      min-width: 48px;
       height: 46px;
+      box-sizing: border-box;
     }
 
     th {
@@ -177,6 +178,23 @@
       font-size: 11px;
       padding: 4px 2px;
       height: auto;
+    }
+
+    .team-header {
+      width: 75px;
+      min-width: 75px;
+      max-width: 75px;
+      font-weight: bold;
+      white-space: nowrap;
+      font-size: 11px;
+      padding: 4px 2px;
+    }
+
+    /* 各フレームと合計欄の幅を統一 (48px) */
+    th:not(.team-header), td.score-cell, td.total-cell {
+      width: 48px;
+      min-width: 48px;
+      max-width: 48px;
     }
 
     .score-cell {
@@ -236,20 +254,6 @@
       position: relative;
     }
 
-    /* CSS描画：ストライク（左右が黒、上下が白） */
-    .mark-strike {
-      width: 100%;
-      height: 100%;
-      background: conic-gradient(from 45deg, #000 0% 25%, #fff 25% 50%, #000 50% 75%, #fff 75% 100%);
-    }
-
-    /* CSS描画：スペア（右上から左下の対角線、右下が黒、左上が白） */
-    .mark-spare {
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(to bottom right, #fff 50%, #000 50%);
-    }
-
     .cell-bottom {
       flex: 1;
       display: flex;
@@ -260,19 +264,13 @@
       height: 50%;
     }
 
-    .team-header {
-      width: 75px;
-      font-weight: bold;
-      white-space: nowrap;
-      font-size: 11px;
-      padding: 4px 2px;
-    }
-
     .total-cell {
       background-color: #f1f2f6;
       font-weight: bold;
       color: #d35400;
       padding: 4px 2px;
+      display: table-cell;
+      vertical-align: middle;
     }
 
     .note {
@@ -649,6 +647,11 @@
       '#e67e22', '#16a085', '#d35400', '#2c3e50'
     ];
 
+    // PDF生成で空白にならないようSVGで確実に描画
+    const STRIKE_SVG = `<svg viewBox="0 0 24 24" style="width:100%; height:100%; display:block;"><rect x="0" y="0" width="24" height="24" fill="#ffffff"/><polygon points="0,0 12,12 0,24" fill="#000000"/><polygon points="24,0 12,12 24,24" fill="#000000"/><polygon points="0,0 24,0 12,12" fill="#ffffff"/><polygon points="0,24 24,24 12,12" fill="#ffffff"/><rect x="0" y="0" width="24" height="24" fill="none" stroke="#000000" stroke-width="1.5"/><line x1="0" y1="0" x2="24" y2="24" stroke="#000000" stroke-width="1.5"/><line x1="24" y1="0" x2="0" y2="24" stroke="#000000" stroke-width="1.5"/></svg>`;
+
+    const SPARE_SVG = `<svg viewBox="0 0 24 24" style="width:100%; height:100%; display:block;"><rect x="0" y="0" width="24" height="24" fill="#ffffff"/><polygon points="24,0 24,24 0,24" fill="#000000"/><polygon points="0,0 24,0 0,24" fill="#ffffff"/><rect x="0" y="0" width="24" height="24" fill="none" stroke="#000000" stroke-width="1.5"/><line x1="24" y1="0" x2="0" y2="24" stroke="#000000" stroke-width="1.5"/></svg>`;
+
     let gameConfig = {
       teamCount: 2,
       songCount: 5,
@@ -831,10 +834,13 @@
       theadRow.innerHTML = '<th class="team-header">チーム</th>';
       for (let i = 1; i <= gameConfig.songCount; i++) {
         const th = document.createElement('th');
+        th.style.width = '48px';
+        th.style.minWidth = '48px';
+        th.style.maxWidth = '48px';
         th.textContent = i;
         theadRow.appendChild(th);
       }
-      theadRow.innerHTML += '<th>合計</th>';
+      theadRow.innerHTML += '<th style="width: 48px; min-width: 48px; max-width: 48px;">合計</th>';
 
       tbody.innerHTML = '';
       for (let t = 0; t < gameConfig.teamCount; t++) {
@@ -1082,16 +1088,15 @@
                   bonusPt = null;
                 }
               } else {
-                // 通常曲、または最終フレームのストライク/スペア
                 bonusPt = Math.round(res.basePoint - res.raw);
               }
             }
 
-            // 右上マスの表示制御 (特殊判定: CSS描画/G, 通常時: 計算結果数値)
+            // 右上マスの表示制御 (SVG描画 / G / 通常計算数値)
             if (res.isStrike) {
-              displayTR = '<div class="mark-strike"></div>';
+              displayTR = STRIKE_SVG;
             } else if (res.isSpare) {
-              displayTR = '<div class="mark-spare"></div>';
+              displayTR = SPARE_SVG;
             } else if (res.diff <= 0) {
               displayTR = "G";
             } else {
@@ -1226,65 +1231,67 @@
       document.getElementById('resultModal').style.display = 'none';
     }
 
-    // スコア表＆内訳表をまとめたPDFの出力処理
+    // スコア表＆内訳表をまとめたPDFの出力処理 (A4 1枚に収まるよう最適化)
     function exportToPDF() {
       const btn = document.getElementById('pdfExportBtn');
       if (btn) btn.textContent = '⏳ PDF生成中...';
 
       const element = document.createElement('div');
-      element.style.padding = '15px';
+      element.style.padding = '8px 12px';
       element.style.fontFamily = '"Helvetica Neue", Arial, sans-serif';
       element.style.color = '#333';
       element.style.backgroundColor = '#ffffff';
+      element.style.width = '700px';
+      element.style.boxSizing = 'border-box';
 
       const now = new Date();
       const dateStr = now.toLocaleDateString('ja-JP') + ' ' + now.toLocaleTimeString('ja-JP', {hour: '2-digit', minute:'2-digit'});
 
-      let html = `<h1 style="text-align:center; font-size: 18px; margin-top: 0; margin-bottom: 4px; color: #2c3e50;">ボウリングカラオケ 最終スコア結果</h1>`;
-      html += `<p style="text-align:right; font-size: 10px; color: #666; margin-bottom: 12px;">出力日時: ${dateStr}</p>`;
+      let html = `<h1 style="text-align:center; font-size: 15px; margin-top: 0; margin-bottom: 2px; color: #2c3e50;">ボウリングカラオケ 最終スコア結果</h1>`;
+      html += `<p style="text-align:right; font-size: 8px; color: #666; margin-bottom: 6px;">出力日時: ${dateStr}</p>`;
 
       // 1. 順位結果サマリー
       const resultText = document.getElementById('resultTextContainer').innerText;
-      html += `<div style="background: #f0f7ff; border: 1px solid #b3d7ff; padding: 10px 12px; border-radius: 6px; margin-bottom: 16px;">
-        <h2 style="font-size: 13px; margin-top: 0; margin-bottom: 6px; color: #2c3e50;">【最終順位結果】</h2>
-        <pre style="font-size: 11px; font-family: inherit; margin: 0; white-space: pre-wrap; line-height: 1.4;">${resultText}</pre>
+      html += `<div style="background: #f0f7ff; border: 1px solid #b3d7ff; padding: 6px 8px; border-radius: 4px; margin-bottom: 8px;">
+        <h2 style="font-size: 11px; margin-top: 0; margin-bottom: 4px; color: #2c3e50;">【最終順位結果】</h2>
+        <pre style="font-size: 9px; font-family: inherit; margin: 0; white-space: pre-wrap; line-height: 1.3;">${resultText}</pre>
       </div>`;
 
       // 2. 全体スコア表
-      html += `<h2 style="font-size: 13px; margin-bottom: 6px; border-bottom: 2px solid #27ae60; padding-bottom: 2px; color: #27ae60;">■ 全体スコア表</h2>`;
+      html += `<h2 style="font-size: 11px; margin-top: 0; margin-bottom: 4px; border-bottom: 2px solid #27ae60; padding-bottom: 1px; color: #27ae60;">■ 全体スコア表</h2>`;
       
-      let scoreTableHtml = `<table style="width:100%; border-collapse:collapse; text-align:center; font-size:10px; margin-bottom:16px;">`;
+      let scoreTableHtml = `<table style="width:auto; border-collapse:collapse; text-align:center; font-size:9px; margin-bottom:8px; table-layout:fixed;">`;
       scoreTableHtml += `<thead><tr style="background:#eee;">
-        <th style="border:1px solid #333; padding:5px; width:80px;">チーム</th>`;
+        <th style="border:1px solid #333; padding:3px; width:75px;">チーム</th>`;
       for (let i = 1; i <= gameConfig.songCount; i++) {
-        scoreTableHtml += `<th style="border:1px solid #333; padding:5px;">${i}</th>`;
+        scoreTableHtml += `<th style="border:1px solid #333; padding:3px; width:48px;">${i}</th>`;
       }
-      scoreTableHtml += `<th style="border:1px solid #333; padding:5px; background:#e0e0e0;">合計</th></tr></thead><tbody>`;
+      scoreTableHtml += `<th style="border:1px solid #333; padding:3px; width:48px; background:#e0e0e0;">合計</th></tr></thead><tbody>`;
 
       for (let t = 0; t < gameConfig.teamCount; t++) {
         const color = TEAM_COLORS[t % TEAM_COLORS.length];
         scoreTableHtml += `<tr>`;
-        scoreTableHtml += `<td style="border:1px solid #333; padding:5px; font-weight:bold; color:${color};">${gameConfig.teamNames[t]}</td>`;
+        scoreTableHtml += `<td style="border:1px solid #333; padding:3px; font-weight:bold; color:${color}; width:75px;">${gameConfig.teamNames[t]}</td>`;
         
         for (let s = 0; s < gameConfig.songCount; s++) {
           const cell = document.querySelector(`.score-cell[data-team="${t}"][data-song="${s}"]`);
           const text = cell ? cell.innerHTML : '';
-          scoreTableHtml += `<td style="border:1px solid #333; padding:0; width:48px; height:46px;">${text}</td>`;
+          scoreTableHtml += `<td style="border:1px solid #333; padding:0; width:48px; height:36px;">${text}</td>`;
         }
-        scoreTableHtml += `<td style="border:1px solid #333; padding:5px; font-weight:bold; background:#f9f9f9; color:#d35400;">${computedTotals[t] || 0}</td>`;
+        scoreTableHtml += `<td style="border:1px solid #333; padding:3px; font-weight:bold; background:#f9f9f9; color:#d35400; width:48px;">${computedTotals[t] || 0}</td>`;
         scoreTableHtml += `</tr>`;
       }
       scoreTableHtml += `</tbody></table>`;
       html += scoreTableHtml;
 
       // 3. 詳細内訳表
-      html += `<h2 style="font-size: 13px; margin-bottom: 6px; border-bottom: 2px solid #3498db; padding-bottom: 2px; color: #3498db;">■ スコア詳細・内訳</h2>`;
-      html += generateDetailHTML();
+      html += `<h2 style="font-size: 11px; margin-top: 0; margin-bottom: 4px; border-bottom: 2px solid #3498db; padding-bottom: 1px; color: #3498db;">■ スコア詳細・内訳</h2>`;
+      html += generateDetailHTML(true);
 
       element.innerHTML = html;
 
       const opt = {
-        margin:       [8, 8, 8, 8],
+        margin:       [5, 5, 5, 5],
         filename:     `bowling_score_${new Date().toISOString().slice(0,10)}.pdf`,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true },
@@ -1321,9 +1328,14 @@
       }
     }
 
-    // 内訳HTML生成共通関数
-    function generateDetailHTML() {
+    // 内訳HTML生成（基本ptを「2×素点-平均」とし、それを超える加点をすべてボーナス欄へ計上）
+    function generateDetailHTML(isPdf = false) {
       let html = '';
+      const cellPadding = isPdf ? '2px 3px' : '4px';
+      const fontSize = isPdf ? '9px' : '11px';
+      const headerFontSize = isPdf ? '9px' : '10px';
+      const tableMargin = isPdf ? '6px' : '12px';
+
       for (let t = 0; t < gameConfig.teamCount; t++) {
         const color = TEAM_COLORS[t % TEAM_COLORS.length];
         
@@ -1347,21 +1359,21 @@
           : `未入力`;
 
         html += `
-          <div class="detail-team-title">
+          <div class="detail-team-title" style="font-size: ${isPdf ? '11px' : '14px'}; margin-top: ${isPdf ? '4px' : '10px'}; margin-bottom: 2px;">
             <span style="color: ${color};">■ ${gameConfig.teamNames[t]}</span>
-            <span class="detail-team-summary">${avgSummaryText}</span>
+            <span class="detail-team-summary" style="font-size: ${isPdf ? '9px' : '11px'}; padding: 1px 4px;">${avgSummaryText}</span>
           </div>
-          <table class="detail-table" style="width:100%; border-collapse:collapse; margin-bottom:12px; text-align:center;">
+          <table class="detail-table" style="width:100%; border-collapse:collapse; margin-bottom:${tableMargin}; text-align:center; font-size:${fontSize};">
             <thead>
               <tr style="background:#f8f9fa;">
-                <th style="border:1px solid #ccc; padding:4px;">曲</th>
-                <th style="border:1px solid #ccc; padding:4px;">素点</th>
-                <th style="border:1px solid #ccc; padding:4px;">全国平均</th>
-                <th style="border:1px solid #ccc; padding:4px;">平均差</th>
-                <th style="border:1px solid #ccc; padding:4px;">判定</th>
-                <th style="border:1px solid #ccc; padding:4px;">基本pt</th>
-                <th style="border:1px solid #ccc; padding:4px;">ボーナス</th>
-                <th style="border:1px solid #ccc; padding:4px;">小計</th>
+                <th style="border:1px solid #ccc; padding:${cellPadding}; font-size:${headerFontSize};">曲</th>
+                <th style="border:1px solid #ccc; padding:${cellPadding}; font-size:${headerFontSize};">素点</th>
+                <th style="border:1px solid #ccc; padding:${cellPadding}; font-size:${headerFontSize};">全国平均</th>
+                <th style="border:1px solid #ccc; padding:${cellPadding}; font-size:${headerFontSize};">平均差</th>
+                <th style="border:1px solid #ccc; padding:${cellPadding}; font-size:${headerFontSize};">判定</th>
+                <th style="border:1px solid #ccc; padding:${cellPadding}; font-size:${headerFontSize};">基本pt</th>
+                <th style="border:1px solid #ccc; padding:${cellPadding}; font-size:${headerFontSize};">ボーナス</th>
+                <th style="border:1px solid #ccc; padding:${cellPadding}; font-size:${headerFontSize};">小計</th>
               </tr>
             </thead>
             <tbody>
@@ -1376,92 +1388,96 @@
             let isStrike = false;
             let isSpare = false;
             let isSplit = false;
-            let basePoint = 0;
 
             if (gameConfig.rulePattern === 'A') {
               isStrike = (data.raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
               isSpare = (data.raw >= gameConfig.threshold) && !isStrike;
               isSplit = (data.raw < gameConfig.threshold) && (diff >= gameConfig.splitThreshold);
-
-              if (isFinal) {
-                basePoint = data.raw + diff * gameConfig.finalMultiplier;
-              } else if (data.raw >= gameConfig.threshold) {
-                basePoint = data.raw + diff * gameConfig.multiplier;
-              } else if (isSplit) {
-                basePoint = data.raw + diff * gameConfig.splitMultiplier;
-              } else {
-                basePoint = 2 * data.raw - data.avg;
-              }
             } else { // パターンB
               isStrike = (data.raw >= 90);
               isSpare = (data.raw < 90) && (diff >= gameConfig.patternB_spareDiffThreshold);
-
-              if (isFinal) {
-                if (isStrike) {
-                  basePoint = data.raw + diff * gameConfig.patternB_strikeFinalMult;
-                } else if (isSpare) {
-                  basePoint = data.raw + diff * gameConfig.patternB_spareFinalMult;
-                } else {
-                  basePoint = data.raw + diff;
-                }
-              } else {
-                basePoint = data.raw + diff;
-              }
             }
 
-            let bonus = 0;
-            let bonusText = "-";
+            // この曲の最終計算ポイント (finalPoint)
+            let finalPoint = 0;
+            let isPending = false;
 
             if (gameConfig.rulePattern === 'A') {
-              if (isStrike && !isFinal) {
-                if (s + 1 < gameConfig.songCount) {
+              if (isFinal) {
+                finalPoint = data.raw + diff * gameConfig.finalMultiplier;
+              } else if (isStrike) {
+                if (s + 1 < gameConfig.songCount && gameState[t][s + 1] && gameState[t][s + 1].raw !== null) {
                   let nextData = gameState[t][s + 1];
-                  if (nextData && nextData.raw !== null && nextData.avg !== null) {
-                    let nextDiff = nextData.raw - nextData.avg;
-                    bonus = nextDiff * gameConfig.multiplier;
-                    if (nextData.raw >= gameConfig.threshold) {
-                      bonus *= gameConfig.strikeBonusMult;
-                    }
-                    bonusText = `+${Math.round(bonus)} pt`;
-                  } else {
-                    bonusText = "(次曲待ち)";
+                  let nextDiff = nextData.raw - nextData.avg;
+                  let bonusAdd = nextDiff * gameConfig.multiplier;
+                  if (nextData.raw >= gameConfig.threshold) {
+                    bonusAdd *= gameConfig.strikeBonusMult;
                   }
+                  finalPoint = data.raw + diff * gameConfig.multiplier + bonusAdd;
                 } else {
-                  bonusText = "(最終曲)";
+                  isPending = true;
                 }
+              } else if (data.raw >= gameConfig.threshold) {
+                finalPoint = data.raw + diff * gameConfig.multiplier;
+              } else if (isSplit) {
+                finalPoint = data.raw + diff * gameConfig.splitMultiplier;
+              } else {
+                finalPoint = 2 * data.raw - data.avg;
               }
             } else { // パターンB
-              if (isStrike && !isFinal) {
-                if (s + 1 < gameConfig.songCount) {
-                  let nextData = gameState[t][s + 1];
-                  if (nextData && nextData.raw !== null && nextData.avg !== null) {
-                    let nextDiff = nextData.raw - nextData.avg;
-                    bonus = nextDiff * 2;
-                    bonusText = `+${Math.round(bonus)} pt`;
-                  } else {
-                    bonusText = "(次曲待ち)";
-                  }
+              if (isFinal) {
+                if (isStrike) {
+                  finalPoint = data.raw + diff * gameConfig.patternB_strikeFinalMult;
+                } else if (isSpare) {
+                  finalPoint = data.raw + diff * gameConfig.patternB_spareFinalMult;
                 } else {
-                  bonusText = "(最終曲)";
+                  finalPoint = data.raw + diff;
                 }
-              } else if (isSpare && !isFinal) {
-                if (s + 1 < gameConfig.songCount) {
+              } else if (isStrike) {
+                if (s + 1 < gameConfig.songCount && gameState[t][s + 1] && gameState[t][s + 1].raw !== null) {
                   let nextData = gameState[t][s + 1];
-                  if (nextData && nextData.raw !== null && nextData.avg !== null) {
-                    let nextDiff = nextData.raw - nextData.avg;
-                    bonus = nextDiff;
-                    bonusText = `+${Math.round(bonus)} pt`;
-                  } else {
-                    bonusText = "(次曲待ち)";
-                  }
+                  let nextDiff = nextData.raw - nextData.avg;
+                  finalPoint = data.raw + diff + nextDiff * 2;
                 } else {
-                  bonusText = "(最終曲)";
+                  isPending = true;
                 }
+              } else if (isSpare) {
+                if (s + 1 < gameConfig.songCount && gameState[t][s + 1] && gameState[t][s + 1].raw !== null) {
+                  let nextData = gameState[t][s + 1];
+                  let nextDiff = nextData.raw - nextData.avg;
+                  finalPoint = data.raw + diff + nextDiff;
+                } else {
+                  isPending = true;
+                }
+              } else {
+                finalPoint = data.raw + diff;
               }
             }
 
-            let finalPoint = Math.round(basePoint + bonus);
-            totalFinalPoint += finalPoint;
+            // 基本ptは「2×素点 - 平均」（＝ 素点 ＋ 平均差）
+            const standardBase = 2 * data.raw - data.avg;
+            const basePtVal = Math.round(standardBase);
+
+            let bonusText = "-";
+            let subtotalText = "-";
+
+            if (isPending) {
+              bonusText = "(次曲待ち)";
+              subtotalText = "(未確定)";
+            } else {
+              let roundedFinal = Math.round(finalPoint);
+              // 「2×素点-平均」からの増減分をすべてボーナスに計上
+              let bonusVal = roundedFinal - basePtVal;
+              if (bonusVal > 0) {
+                bonusText = `+${bonusVal} pt`;
+              } else if (bonusVal < 0) {
+                bonusText = `${bonusVal} pt`;
+              } else {
+                bonusText = `-`;
+              }
+              subtotalText = `<b>${roundedFinal} pt</b>`;
+              totalFinalPoint += roundedFinal;
+            }
 
             let judgeText = "通常";
             if (isStrike) judgeText = "ストライク";
@@ -1473,21 +1489,21 @@
 
             html += `
               <tr>
-                <td style="border:1px solid #ccc; padding:4px;">第${s + 1}曲</td>
-                <td style="border:1px solid #ccc; padding:4px;">${data.raw} 点</td>
-                <td style="border:1px solid #ccc; padding:4px;">${data.avg} 点</td>
-                <td style="border:1px solid #ccc; padding:4px;">${diff > 0 ? '+' : ''}${diff.toFixed(1)}</td>
-                <td style="border:1px solid #ccc; padding:4px;"><b>${judgeText}</b></td>
-                <td style="border:1px solid #ccc; padding:4px;">${Math.round(basePoint)} pt</td>
-                <td style="border:1px solid #ccc; padding:4px;">${bonusText}</td>
-                <td style="border:1px solid #ccc; padding:4px;"><b>${finalPoint} pt</b></td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">第${s + 1}曲</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">${data.raw} 点</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">${data.avg} 点</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">${diff > 0 ? '+' : ''}${diff.toFixed(1)}</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};"><b>${judgeText}</b></td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">${basePtVal} pt</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">${bonusText}</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">${subtotalText}</td>
               </tr>
             `;
           } else {
             html += `
               <tr>
-                <td style="border:1px solid #ccc; padding:4px;">第${s + 1}曲</td>
-                <td colspan="7" style="border:1px solid #ccc; padding:4px; color: #999;">- 未入力 -</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">第${s + 1}曲</td>
+                <td colspan="7" style="border:1px solid #ccc; padding:${cellPadding}; color: #999;">- 未入力 -</td>
               </tr>
             `;
           }
@@ -1501,24 +1517,24 @@
           html += `
             <tfoot>
               <tr style="background-color: #f0f4f8;">
-                <td style="border:1px solid #ccc; padding:4px; font-weight:bold;">合計</td>
-                <td style="border:1px solid #ccc; padding:4px; font-weight:bold;">${totalRaw.toFixed(1)}点</td>
-                <td style="border:1px solid #ccc; padding:4px; font-weight:bold;">${totalAvg.toFixed(1)}点</td>
-                <td style="border:1px solid #ccc; padding:4px; font-weight:bold;">${diffSum > 0 ? '+' : ''}${diffSum.toFixed(1)}</td>
-                <td style="border:1px solid #ccc; padding:4px;">-</td>
-                <td style="border:1px solid #ccc; padding:4px;">-</td>
-                <td style="border:1px solid #ccc; padding:4px;">-</td>
-                <td style="border:1px solid #ccc; padding:4px; font-weight:bold;">${totalFinalPoint}pt</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">合計</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">${totalRaw.toFixed(1)}点</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">${totalAvg.toFixed(1)}点</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">${diffSum > 0 ? '+' : ''}${diffSum.toFixed(1)}</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">-</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">-</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">-</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">${totalFinalPoint}pt</td>
               </tr>
               <tr style="background-color: #e8f8f8;">
-                <td style="border:1px solid #ccc; padding:4px; font-weight:bold;">平均</td>
-                <td style="border:1px solid #ccc; padding:4px; font-weight:bold;">${rawAvg.toFixed(2)}点</td>
-                <td style="border:1px solid #ccc; padding:4px; font-weight:bold;">${avgAvg.toFixed(2)}点</td>
-                <td style="border:1px solid #ccc; padding:4px; font-weight:bold;">${diffAvg > 0 ? '+' : ''}${diffAvg.toFixed(2)}</td>
-                <td style="border:1px solid #ccc; padding:4px;">-</td>
-                <td style="border:1px solid #ccc; padding:4px;">-</td>
-                <td style="border:1px solid #ccc; padding:4px;">-</td>
-                <td style="border:1px solid #ccc; padding:4px; font-weight:bold;">${(totalFinalPoint / enteredCount).toFixed(1)}pt</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">平均</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">${rawAvg.toFixed(2)}点</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">${avgAvg.toFixed(2)}点</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">${diffAvg > 0 ? '+' : ''}${diffAvg.toFixed(2)}</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">-</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">-</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">-</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">${(totalFinalPoint / enteredCount).toFixed(1)}pt</td>
               </tr>
             </tfoot>
           `;
@@ -1530,7 +1546,7 @@
 
     function openDetailModal() {
       const container = document.getElementById('modalBodyContainer');
-      container.innerHTML = generateDetailHTML();
+      container.innerHTML = generateDetailHTML(false);
       document.getElementById('detailModal').style.display = 'flex';
     }
 
