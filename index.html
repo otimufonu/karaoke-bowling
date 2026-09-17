@@ -647,10 +647,10 @@
       '#e67e22', '#16a085', '#d35400', '#2c3e50'
     ];
 
-    // PDF生成で空白にならないようSVGで確実に描画
-    const STRIKE_SVG = `<svg viewBox="0 0 24 24" style="width:100%; height:100%; display:block;"><rect x="0" y="0" width="24" height="24" fill="#ffffff"/><polygon points="0,0 12,12 0,24" fill="#000000"/><polygon points="24,0 12,12 24,24" fill="#000000"/><polygon points="0,0 24,0 12,12" fill="#ffffff"/><polygon points="0,24 24,24 12,12" fill="#ffffff"/><rect x="0" y="0" width="24" height="24" fill="none" stroke="#000000" stroke-width="1.5"/><line x1="0" y1="0" x2="24" y2="24" stroke="#000000" stroke-width="1.5"/><line x1="24" y1="0" x2="0" y2="24" stroke="#000000" stroke-width="1.5"/></svg>`;
+    // SVG内の不要な外枠要素(<rect stroke=...>)を除去し、他のマス目のCSS枠線(1px)に合わせた設定
+    const STRIKE_SVG = `<svg viewBox="0 0 24 24" style="width:100%; height:100%; display:block;"><polygon points="0,0 12,12 0,24" fill="#000000"/><polygon points="24,0 12,12 24,24" fill="#000000"/><polygon points="0,0 24,0 12,12" fill="#ffffff"/><polygon points="0,24 24,24 12,12" fill="#ffffff"/><line x1="0" y1="0" x2="24" y2="24" stroke="#000000" stroke-width="1"/><line x1="24" y1="0" x2="0" y2="24" stroke="#000000" stroke-width="1"/></svg>`;
 
-    const SPARE_SVG = `<svg viewBox="0 0 24 24" style="width:100%; height:100%; display:block;"><rect x="0" y="0" width="24" height="24" fill="#ffffff"/><polygon points="24,0 24,24 0,24" fill="#000000"/><polygon points="0,0 24,0 0,24" fill="#ffffff"/><rect x="0" y="0" width="24" height="24" fill="none" stroke="#000000" stroke-width="1.5"/><line x1="24" y1="0" x2="0" y2="24" stroke="#000000" stroke-width="1.5"/></svg>`;
+    const SPARE_SVG = `<svg viewBox="0 0 24 24" style="width:100%; height:100%; display:block;"><polygon points="24,0 24,24 0,24" fill="#000000"/><polygon points="0,0 24,0 0,24" fill="#ffffff"/><line x1="24" y1="0" x2="0" y2="24" stroke="#000000" stroke-width="1"/></svg>`;
 
     let gameConfig = {
       teamCount: 2,
@@ -1231,7 +1231,7 @@
       document.getElementById('resultModal').style.display = 'none';
     }
 
-    // スコア表＆内訳表をまとめたPDFの出力処理 (A4 1枚に収まるよう最適化)
+    // スコア表＆内訳表をまとめたPDFの出力処理
     function exportToPDF() {
       const btn = document.getElementById('pdfExportBtn');
       if (btn) btn.textContent = '⏳ PDF生成中...';
@@ -1328,7 +1328,7 @@
       }
     }
 
-    // 内訳HTML生成（基本ptを「2×素点-平均」とし、それを超える加点をすべてボーナス欄へ計上）
+    // 内訳HTML生成
     function generateDetailHTML(isPdf = false) {
       let html = '';
       const cellPadding = isPdf ? '2px 3px' : '4px';
