@@ -236,6 +236,13 @@
       position: relative;
     }
 
+    /* 右上マス用SVGスタイル */
+    .score-symbol {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
     .cell-bottom {
       flex: 1;
       display: flex;
@@ -589,7 +596,7 @@
         </table>
       </div>
 
-      <div class="note">※ 左上:素点 / 右上:判定記号 / 下:累計。<b>マス目クリックで編集</b></div>
+      <div class="note">※ 左上:素点 / 右上:判定記号または計算点 / 下:累計。<b>マス目クリックで編集</b></div>
 
       <div class="btn-action-container">
         <button class="btn-info" onclick="openDetailModal()">📊 内訳</button>
@@ -951,6 +958,10 @@
       miniTotalsContainer.innerHTML = '';
       computedTotals = [];
 
+      // スコア表用のSVG記号コード（画像デザインに準拠）
+      const strikeSVG = `<svg class="score-symbol" viewBox="0 0 100 100" preserveAspectRatio="none"><rect width="100" height="100" fill="#000"/><line x1="0" y1="0" x2="100" y2="100" stroke="#fff" stroke-width="8"/><line x1="100" y1="0" x2="0" y2="100" stroke="#fff" stroke-width="8"/></svg>`;
+      const spareSVG = `<svg class="score-symbol" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="0,0 100,0 100,100" fill="#000"/><line x1="0" y1="0" x2="100" y2="100" stroke="#000" stroke-width="6"/></svg>`;
+
       for (let t = 0; t < gameConfig.teamCount; t++) {
         let songResults = [];
 
@@ -1073,15 +1084,15 @@
               }
             }
 
-            // 右上マスの表示指定（数字は表示せず、記号のみ表示）
+            // 右上マスの表示指定（特殊判定は画像デザインの描画、それ以外は計算結果の数字）
             if (res.isStrike) {
-              displayTR = "✕";
+              displayTR = strikeSVG;
             } else if (res.isSpare) {
-              displayTR = "╱";
+              displayTR = spareSVG;
             } else if (res.diff <= 0) {
               displayTR = "G";
             } else {
-              displayTR = "";
+              displayTR = (bonusPt !== null) ? bonusPt : "";
             }
 
             if (bonusPt !== null) {
