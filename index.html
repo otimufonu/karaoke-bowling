@@ -2,221 +2,1569 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ボウリング スコア＆ポイント管理</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ポイント計算＆スコア表</title>
+  <!-- PDF生成用ライブラリ (html2pdf.js) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
-    :root {
-      --primary-color: #1e3a8a;
-      --secondary-color: #2563eb;
-      --bg-color: #f8fafc;
-      --card-bg: #ffffff;
-      --border-color: #cbd5e1;
+    * {
+      box-sizing: border-box;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg-color); padding: 16px; color: #1e293b; }
-    .container { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
-    
-    .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; }
-    .card-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 12px; color: var(--primary-color); display: flex; justify-content: space-between; align-items: center; }
-
-    /* 推定時間表示バッジ */
-    .time-estimate {
-      background-color: #eff6ff;
-      border: 1px solid #bfdbfe;
-      color: #1e40af;
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-size: 0.85rem;
-      font-weight: 600;
+    html, body {
+      height: 100%;
+      height: 100dvh; /* iPhoneの動的ツールバーに対応 */
+      margin: 0;
+      padding: 0;
+      overflow: hidden; /* 縦スクロール禁止 */
     }
 
-    /* 拡大版 スコア入力エリア */
-    .score-entry-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(75px, 1fr));
+    body {
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      padding: 6px;
+      background-color: #f4f7f6;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card {
+      background: white;
+      padding: 8px 10px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+      margin-bottom: 6px;
+    }
+
+    /* ゲーム画面全体をフレックスボックス化 */
+    #gameScreen {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      gap: 6px;
+    }
+
+    .input-card {
+      flex: 0 0 auto;
+    }
+
+    .score-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 0;
+      min-height: 0;
+    }
+
+    .turn-info {
+      font-weight: bold;
+      font-size: 14px;
+      margin-bottom: 4px;
+      padding: 4px;
+      background-color: #eef2f5;
+      border-radius: 4px;
+      text-align: center;
+      border: 1px solid #bdc3c7;
+    }
+
+    .current-rule-badge {
+      text-align: center;
+      font-size: 10px;
+      color: #666;
+      margin-bottom: 6px;
+      background: #fdfefe;
+      padding: 2px 4px;
+      border: 1px dashed #ccc;
+      border-radius: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .form-row {
+      display: flex;
       gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .form-group {
+      flex: 1;
+      min-width: 0;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 2px;
+      font-size: 11px;
+    }
+
+    input[type="number"], input[type="text"], select {
+      width: 100%;
+      padding: 6px 8px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    .btn-main {
+      background: #27ae60;
+      color: white;
+      border: none;
+      padding: 8px;
+      font-size: 15px;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 4px;
+    }
+
+    .btn-main:hover {
+      background: #219150;
+    }
+
+    /* タイトル横の常時表示合計バッジエリア */
+    .score-header-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 4px;
+    }
+
+    .mini-totals-container {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .mini-total-badge {
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: bold;
+      color: white;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    }
+
+    /* スコア表 */
+    .table-container {
+      flex: 1;
+      overflow-x: auto;
+      overflow-y: auto;
+      min-height: 0;
+    }
+
+    table {
+      border-collapse: collapse;
+      background: white;
+      text-align: center;
+      table-layout: fixed;
+      width: max-content;
+    }
+
+    th, td {
+      border: 1px solid #333;
+      padding: 0;
+      font-size: 12px;
+      height: 46px;
+      box-sizing: border-box;
+    }
+
+    th {
+      background: #eee;
+      font-size: 11px;
+      padding: 4px 2px;
+      height: auto;
+    }
+
+    .team-header {
+      width: 75px;
+      min-width: 75px;
+      max-width: 75px;
+      font-weight: bold;
+      white-space: nowrap;
+      font-size: 11px;
+      padding: 4px 2px;
+    }
+
+    /* 各フレームと合計欄の幅を統一 (48px) */
+    th:not(.team-header), td.score-cell, td.total-cell {
+      width: 48px;
+      min-width: 48px;
+      max-width: 48px;
+    }
+
+    .score-cell {
+      cursor: pointer;
+      background-color: #fff;
+      transition: background-color 0.2s, outline 0.2s;
+      user-select: none;
+      padding: 0 !important;
+    }
+
+    .score-cell:hover {
+      background-color: #f0f7ff;
+    }
+
+    .score-cell.selected-cell {
+      outline: 2px solid #27ae60 !important;
+      background-color: #e8f8f5 !important;
+      font-weight: bold;
+    }
+
+    /* ボウリングスタイルグリッドセル */
+    .bowling-cell {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+    }
+
+    .cell-top {
+      display: flex;
+      flex: 1;
+      border-bottom: 1px solid #333;
+      height: 50%;
+    }
+
+    .cell-tl {
+      flex: 1;
+      border-right: 1px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    .cell-tr {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+      color: #333;
+      overflow: hidden;
+      white-space: nowrap;
+      position: relative;
+    }
+
+    .cell-bottom {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: bold;
+      height: 50%;
+    }
+
+    .total-cell {
+      background-color: #f1f2f6;
+      font-weight: bold;
+      color: #d35400;
+      padding: 4px 2px;
+      display: table-cell;
+      vertical-align: middle;
+    }
+
+    .note {
+      font-size: 10px;
+      color: #666;
+      margin-top: 3px;
+      text-align: right;
+      flex: 0 0 auto;
+    }
+
+    .btn-action-container {
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+      flex: 0 0 auto;
+    }
+
+    .btn-info, .btn-sub, .btn-reset {
+      border: none;
+      padding: 8px 4px;
+      font-size: 11px;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+      flex: 1;
+      text-align: center;
+      color: white;
+    }
+
+    .btn-info { background: #3498db; }
+    .btn-info:hover { background: #2980b9; }
+
+    .btn-sub { background: #7f8c8d; }
+    .btn-sub:hover { background: #687475; }
+
+    .btn-reset { background: #e74c3c; }
+    .btn-reset:hover { background: #c0392b; }
+
+    /* ルール設定画面 */
+    #configScreen {
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    .team-name-inputs {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .rule-box {
+      background-color: #f0f7ff;
+      border: 1px solid #b3d7ff;
+      padding: 8px;
+      border-radius: 6px;
+      margin-top: 8px;
+    }
+
+    .rule-box h3 {
+      margin-top: 0;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: #2c3e50;
+    }
+
+    .inline-inputs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      font-weight: bold;
+      margin-top: 6px;
+      font-size: 12px;
+    }
+
+    .inline-inputs input {
+      width: 60px;
+      text-align: center;
+    }
+
+    .rule-desc {
+      font-size: 10px;
+      color: #555;
+      margin-top: 2px;
+    }
+
+    /* モーダル (詳細・内訳画面・結果画面) */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 12px;
+      border-radius: 8px;
+      max-width: 900px;
+      width: 95%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 6px;
+      margin-bottom: 10px;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .btn-close {
+      background: #95a5a6;
+      color: white;
+      border: none;
+      padding: 4px 12px;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .detail-team-title {
+      font-size: 14px;
+      font-weight: bold;
+      margin-top: 10px;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .detail-team-summary {
+      font-size: 11px;
+      font-weight: normal;
+      color: #444;
+      background: #f0f3f5;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+    }
+
+    .detail-table {
+      font-size: 11px;
       margin-bottom: 12px;
     }
-    .frame-box {
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      padding: 6px;
-      background: #f1f5f9;
-      text-align: center;
-    }
-    .frame-label { font-size: 0.75rem; font-weight: bold; color: #64748b; margin-bottom: 4px; }
-    
-    /* 入力欄を大きめに設定 */
-    .score-input {
-      width: 100%;
-      height: 48px;
-      font-size: 1.25rem;
-      font-weight: bold;
-      text-align: center;
-      border: 2px solid #93c5fd;
-      border-radius: 6px;
-      background: #ffffff;
-      outline: none;
-      transition: border-color 0.15s ease-in-out;
-    }
-    .score-input:focus {
-      border-color: var(--secondary-color);
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+
+    .detail-table th {
+      background: #f8f9fa;
+      font-size: 10px;
     }
 
-    /* データの羅列的・コンパクトな内訳表 */
-    .breakdown-container { overflow-x: auto; }
-    .breakdown-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.75rem; /* 小さめフォント (12px) */
-      line-height: 1.1;
-    }
-    .breakdown-table th, .breakdown-table td {
-      border: 1px solid #94a3b8;
-      padding: 2px 4px; /* マス目をギュッと縮小 */
-      text-align: center;
-      white-space: nowrap;
-    }
-    .breakdown-table th {
-      background-color: #e2e8f0;
-      color: #334155;
-      font-weight: 700;
-    }
-    .breakdown-table tr:nth-child(even) { background-color: #f8fafc; }
-    .breakdown-table td.num { font-family: monospace, monospace; }
-
-    .summary-box {
-      display: flex;
-      gap: 16px;
+    .detail-table tfoot td {
       font-weight: bold;
-      margin-top: 8px;
-      font-size: 0.9rem;
+      font-size: 11px;
     }
   </style>
 </head>
 <body>
 
-<div class="container">
-  <!-- スコア入力＆ステータス画面 -->
-  <div class="card">
-    <div class="card-title">
-      <span>スコア入力</span>
-      <!-- 推定総時間 (1フレーム4分換算) -->
-      <div class="time-estimate" id="timeEstimate">
-        ⏱️ 推定総時間: 0分 (0時間0分)
+  <!-- 1. ルール設定画面 -->
+  <div id="configScreen" class="card">
+    <h2 style="margin-top:0; font-size:18px;">ルール設定</h2>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="teamCountInput">チーム数:</label>
+        <input type="number" id="teamCountInput" value="2" min="1" max="10" onchange="renderTeamNameInputs()" oninput="renderTeamNameInputs()">
+      </div>
+      <div class="form-group">
+        <label for="songCountInput">曲数 (ゲーム数):</label>
+        <input type="number" id="songCountInput" value="5" min="1" max="20">
       </div>
     </div>
 
-    <div class="score-entry-grid" id="scoreGrid">
-      <!-- JavaScriptでフレーム入力欄を生成 -->
+    <!-- チーム名入力欄 -->
+    <div class="form-group">
+      <label>チーム名:</label>
+      <div id="teamNamesContainer" class="team-name-inputs"></div>
     </div>
 
-    <div class="summary-box">
-      <div>入力済フレーム数: <span id="completedFrames">0</span> / 10</div>
-      <div>合計スコア: <span id="totalScore">0</span></div>
+    <!-- ルールパターン選択 -->
+    <div class="form-group" style="margin-top: 8px;">
+      <label for="rulePatternSelect">計算ルールパターン:</label>
+      <select id="rulePatternSelect" onchange="toggleRulePatternUI()">
+        <option value="A">パターンA（従来ルール）</option>
+        <option value="B" selected>パターンB（新ルール）</option>
+      </select>
+    </div>
+
+    <!-- 詳細ルール設定エリア：パターンA -->
+    <div id="ruleBoxA" class="rule-box" style="display: none;">
+      <h3>【パターンA】計算＆ボウリング判定ルール設定</h3>
+      
+      <div class="inline-inputs">
+        ① ボーナス基準素点:
+        <input type="number" id="thresholdInput" value="90"> 点以上
+      </div>
+      <div class="rule-desc">※上記未満かつスプリット未達成の場合 ＝ 【 2 × 素点 － 全国平均 】</div>
+
+      <div class="inline-inputs">
+        ② 通常ボーナス倍率:
+        <input type="number" id="multiplierInput" value="1.3" step="0.1"> 倍
+      </div>
+      <div class="rule-desc">※①以上の場合の基本点 ＝ 【 素点 ＋ (素点 － 全国平均) × 通常倍率 】</div>
+
+      <div class="inline-inputs">
+        ③ ストライク判定閾値: 平均差 × 通常倍率 ≧
+        <input type="number" id="strikeThresholdInput" value="10" step="1"> 点
+      </div>
+      <div class="rule-desc">※①以上かつ③達成で「ストライク」(次曲ボーナスあり)。未達成なら「スペア」。</div>
+
+      <div class="inline-inputs">
+        ④ 次曲90点以上時の追加ボーナス倍率:
+        <input type="number" id="strikeBonusMultInput" value="1.3" step="0.1"> 倍
+      </div>
+      <div class="rule-desc">※ストライク後の曲が90点以上の時、前曲ボーナスは 【 次曲平均差 × 通常倍率 × 追加倍率 】</div>
+
+      <div class="inline-inputs">
+        ⑤ スプリット設定: 素点①未満かつ (素点 － 全国平均) ≧
+        <input type="number" id="splitThresholdInput" value="3" step="1"> 点
+      </div>
+      <div class="inline-inputs" style="margin-top:2px;">
+        スプリット倍率:
+        <input type="number" id="splitMultiplierInput" value="1.2" step="0.1"> 倍
+      </div>
+      <div class="rule-desc">※素点①未満でも平均差達成で「スプリット」。【 素点 ＋ (素点 － 全国平均) × スプリット倍率 】</div>
+
+      <div class="inline-inputs">
+        ⑥ 最終フレーム（最終曲）倍率:
+        <input type="number" id="finalMultiplierInput" value="1.5" step="0.1"> 倍
+      </div>
+      <div class="rule-desc">※最終曲のポイント ＝ 【 素点 ＋ (素点 － 全国平均) × 最終曲倍率 】</div>
+    </div>
+
+    <!-- 詳細ルール設定エリア：パターンB -->
+    <div id="ruleBoxB" class="rule-box">
+      <h3>【パターンB】新ルール設定</h3>
+      <div class="rule-desc" style="margin-bottom: 6px; font-weight: bold; color: #2c3e50;">基本点数 ＝ 素点 ＋ (素点 － 全国平均)</div>
+      
+      <div style="border-top: 1px dashed #b3d7ff; padding-top: 4px;">
+        <div class="inline-inputs">
+          ① ストライク判定: 素点 ≧ 90 点
+        </div>
+        <div class="rule-desc">通常計算: 素点＋(素点－平均)＋(次回の素点－次回の平均)×2</div>
+        <div class="inline-inputs" style="margin-top:2px;">
+          最終フレームのストライク倍率(△):
+          <input type="number" id="patternB_strikeFinalMult" value="2.0" step="0.1"> 倍
+        </div>
+        <div class="rule-desc">※最終フレーム計算: 素点 ＋ (素点 － 平均) × △</div>
+      </div>
+
+      <div style="border-top: 1px dashed #b3d7ff; padding-top: 4px; margin-top: 6px;">
+        <div class="inline-inputs">
+          ② スペア判定: 素点 ＜ 90 点 かつ (素点 － 平均) ≧
+          <input type="number" id="patternB_spareDiffThreshold" value="0" step="1"> 点
+        </div>
+        <div class="rule-desc">通常計算: 素点＋(素点－平均)＋(次回の素点－次回の平均)</div>
+        <div class="inline-inputs" style="margin-top:2px;">
+          最終フレームのスペア倍率(☆):
+          <input type="number" id="patternB_spareFinalMult" value="1.5" step="0.1"> 倍
+        </div>
+        <div class="rule-desc">※最終フレーム計算: 素点 ＋ (素点 － 平均) × ☆</div>
+      </div>
+
+      <div class="rule-desc" style="margin-top: 6px; color: #888;">※パターンBではスプリット判定・ボーナスはありません。</div>
+    </div>
+
+    <button class="btn-main" onclick="startGame()">ゲーム開始</button>
+  </div>
+
+
+  <!-- 2. ゲームメイン画面 -->
+  <div id="gameScreen" style="display: none;">
+    
+    <!-- 計算＆入力エリア -->
+    <div class="card input-card">
+      <div class="turn-info">
+        編集対象: <span id="currentTeamText">-</span> (第<span id="currentRoundText">1</span>曲目)
+      </div>
+
+      <div class="current-rule-badge" id="ruleBadgeText"></div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="rawScore">素点:</label>
+          <input type="number" id="rawScore" placeholder="素点">
+        </div>
+        <div class="form-group">
+          <label for="avgScore">平均点:</label>
+          <input type="number" id="avgScore" placeholder="全国平均">
+        </div>
+      </div>
+
+      <button class="btn-main" id="setBtn" onclick="setScore()">セット</button>
+    </div>
+
+    <!-- スコア表エリア -->
+    <div class="card score-card">
+      <div class="score-header-container">
+        <div id="miniTotals" class="mini-totals-container"></div>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr id="scoreTheadRow">
+            </tr>
+          </thead>
+          <tbody id="scoreTbody">
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note">※ 左上:素点 / 右上:判定記号・計算点 / 下:累計。<b>マス目クリックで編集</b></div>
+
+      <div class="btn-action-container">
+        <button class="btn-info" onclick="openDetailModal()">📊 内訳</button>
+        <button class="btn-sub" onclick="backToConfig()">⚙️ ルール</button>
+        <button class="btn-reset" onclick="resetGame()">クリア</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 3. 内訳詳細モーダル画面 -->
+  <div id="detailModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>スコア詳細・内訳</h2>
+        <button class="btn-close" onclick="closeDetailModal()">閉じる</button>
+      </div>
+      <div id="modalBodyContainer">
+      </div>
     </div>
   </div>
 
-  <!-- 内訳表（ギュッと詰めたコンパクトレイアウト） -->
-  <div class="card">
-    <div class="card-title">詳細内訳データ</div>
-    <div class="breakdown-container">
-      <table class="breakdown-table">
-        <thead>
-          <tr>
-            <th>Frame</th>
-            <th>1st</th>
-            <th>2nd</th>
-            <th>3rd</th>
-            <th>点数</th>
-            <th>累計</th>
-            <th>ポイント</th>
-            <th>所要時間</th>
-          </tr>
-        </thead>
-        <tbody id="breakdownBody">
-          <!-- データの羅列として表示 -->
-        </tbody>
-      </table>
+  <!-- 4. 最終結果モーダル画面 -->
+  <div id="resultModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="modal-header">
+        <h2>🏆 最終結果発表</h2>
+        <button class="btn-close" onclick="closeResultModal()">閉じる</button>
+      </div>
+      <div id="resultTextContainer" style="white-space: pre-wrap; font-family: sans-serif; font-size: 13px; background: #f8f9fa; border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px; line-height: 1.5; margin-bottom: 12px; max-height: 45vh; overflow-y: auto;"></div>
+      <div style="display: flex; gap: 8px; flex-direction: column;">
+        <button class="btn-main" id="pdfExportBtn" style="background: #27ae60; padding: 10px; font-size: 14px;" onclick="exportToPDF()">📄 スコア表＆内訳をPDF出力</button>
+        <button class="btn-sub" style="padding: 8px; font-size: 12px;" onclick="closeResultModal()">閉じる</button>
+      </div>
     </div>
   </div>
-</div>
 
-<script>
-  const TOTAL_FRAMES = 10;
-  const MINUTES_PER_FRAME = 4; // 1フレーム4分
-  const scores = Array(TOTAL_FRAMES).fill('');
+  <script>
+    const STORAGE_KEY = 'bowling_score_app_data';
 
-  function initApp() {
-    const grid = document.getElementById('scoreGrid');
-    grid.innerHTML = '';
+    const TEAM_COLORS = [
+      '#e74c3c', '#2980b9', '#27ae60', '#8e44ad', 
+      '#e67e22', '#16a085', '#d35400', '#2c3e50'
+    ];
 
-    for (let i = 0; i < TOTAL_FRAMES; i++) {
-      const box = document.createElement('div');
-      box.className = 'frame-box';
-      box.innerHTML = `
-        <div class="frame-label">F${i + 1}</div>
-        <input type="number" min="0" max="30" class="score-input" data-index="${i}" placeholder="-">
-      `;
-      grid.appendChild(box);
+    // SVG内の不要な外枠要素(<rect stroke=...>)を除去し、他のマス目のCSS枠線(1px)に合わせた設定
+    const STRIKE_SVG = `<svg viewBox="0 0 24 24" style="width:100%; height:100%; display:block;"><polygon points="0,0 12,12 0,24" fill="#000000"/><polygon points="24,0 12,12 24,24" fill="#000000"/><polygon points="0,0 24,0 12,12" fill="#ffffff"/><polygon points="0,24 24,24 12,12" fill="#ffffff"/><line x1="0" y1="0" x2="24" y2="24" stroke="#000000" stroke-width="1"/><line x1="24" y1="0" x2="0" y2="24" stroke="#000000" stroke-width="1"/></svg>`;
+
+    const SPARE_SVG = `<svg viewBox="0 0 24 24" style="width:100%; height:100%; display:block;"><polygon points="24,0 24,24 0,24" fill="#000000"/><polygon points="0,0 24,0 0,24" fill="#ffffff"/><line x1="24" y1="0" x2="0" y2="24" stroke="#000000" stroke-width="1"/></svg>`;
+
+    let gameConfig = {
+      teamCount: 2,
+      songCount: 5,
+      teamNames: [],
+      rulePattern: 'B', // 'A' または 'B'
+      // パターンA設定
+      threshold: 90,
+      multiplier: 1.3,
+      strikeThreshold: 10,
+      strikeBonusMult: 1.3,
+      splitThreshold: 3,
+      splitMultiplier: 1.2,
+      finalMultiplier: 1.5,
+      // パターンB設定
+      patternB_strikeFinalMult: 2.0,
+      patternB_spareDiffThreshold: 0,
+      patternB_spareFinalMult: 1.5
+    };
+
+    let gameState = [];
+    let selectedCell = { team: 0, song: 0 };
+    let computedTotals = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderTeamNameInputs();
+      toggleRulePatternUI();
+      loadFromLocalStorage();
+    });
+
+    function toggleRulePatternUI() {
+      const pattern = document.getElementById('rulePatternSelect').value;
+      if (pattern === 'A') {
+        document.getElementById('ruleBoxA').style.display = 'block';
+        document.getElementById('ruleBoxB').style.display = 'none';
+      } else {
+        document.getElementById('ruleBoxA').style.display = 'none';
+        document.getElementById('ruleBoxB').style.display = 'block';
+      }
     }
 
-    document.querySelectorAll('.score-input').forEach(input => {
-      input.addEventListener('input', handleInput);
-    });
+    function saveToLocalStorage() {
+      const dataToSave = {
+        gameConfig: gameConfig,
+        gameState: gameState,
+        isGameActive: (document.getElementById('gameScreen').style.display === 'flex')
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+    }
 
-    updateCalculations();
-  }
+    function loadFromLocalStorage() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return;
 
-  function handleInput(e) {
-    const idx = parseInt(e.target.dataset.index, 10);
-    scores[idx] = e.target.value === '' ? '' : Math.min(30, Math.max(0, parseInt(e.target.value, 10) || 0));
-    updateCalculations();
-  }
+      try {
+        const data = JSON.parse(saved);
+        if (data && data.gameConfig && data.gameState) {
+          gameConfig = data.gameConfig;
+          gameState = data.gameState;
 
-  function updateCalculations() {
-    let currentTotal = 0;
-    let filledCount = 0;
-    const tbody = document.getElementById('breakdownBody');
-    tbody.innerHTML = '';
+          document.getElementById('teamCountInput').value = gameConfig.teamCount;
+          document.getElementById('songCountInput').value = gameConfig.songCount;
+          document.getElementById('rulePatternSelect').value = gameConfig.rulePattern || 'B';
+          
+          document.getElementById('thresholdInput').value = gameConfig.threshold;
+          document.getElementById('multiplierInput').value = gameConfig.multiplier;
+          document.getElementById('strikeThresholdInput').value = gameConfig.strikeThreshold;
+          document.getElementById('strikeBonusMultInput').value = gameConfig.strikeBonusMult;
+          document.getElementById('splitThresholdInput').value = gameConfig.splitThreshold ?? 3;
+          document.getElementById('splitMultiplierInput').value = gameConfig.splitMultiplier ?? 1.2;
+          document.getElementById('finalMultiplierInput').value = gameConfig.finalMultiplier ?? 1.5;
 
-    scores.forEach((val, i) => {
-      const numVal = val !== '' ? Number(val) : 0;
-      if (val !== '') filledCount++;
-      currentTotal += numVal;
+          document.getElementById('patternB_strikeFinalMult').value = gameConfig.patternB_strikeFinalMult ?? 2.0;
+          document.getElementById('patternB_spareDiffThreshold').value = gameConfig.patternB_spareDiffThreshold ?? 0;
+          document.getElementById('patternB_spareFinalMult').value = gameConfig.patternB_spareFinalMult ?? 1.5;
 
-      const mins = (i + 1) * MINUTES_PER_FRAME;
-      const pts = Math.floor(numVal * 1.2); // ポイント計算例
+          toggleRulePatternUI();
+          renderTeamNameInputs();
+          const nameInputs = document.querySelectorAll('#teamNamesContainer input');
+          gameConfig.teamNames.forEach((name, idx) => {
+            if (nameInputs[idx]) nameInputs[idx].value = name;
+          });
 
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="num">F${i + 1}</td>
-        <td class="num">${val !== '' ? numVal : '-'}</td>
-        <td class="num">-</td>
-        <td class="num">-</td>
-        <td class="num">${val !== '' ? numVal : 0}</td>
-        <td class="num">${currentTotal}</td>
-        <td class="num">${pts}pt</td>
-        <td class="num">${mins}分</td>
-      `;
-      tbody.appendChild(tr);
-    });
+          if (data.isGameActive) {
+            updateRuleBadgeText();
+            buildScoreTable();
+            document.getElementById('configScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'flex';
 
-    // 1フレーム4分換算の推定総時間計算
-    const totalMinutes = TOTAL_FRAMES * MINUTES_PER_FRAME;
-    const hours = Math.floor(totalMinutes / 60);
-    const remainingMins = totalMinutes % 60;
-    
-    document.getElementById('timeEstimate').innerText = 
-      `⏱️ 推定総時間: ${totalMinutes}分 (${hours > 0 ? hours + '時間' : ''}${remainingMins}分)`;
+            selectCell(0, 0);
+            recalculateAll();
+          }
+        }
+      } catch (e) {
+        console.error('保存データの読み込みに失敗しました', e);
+      }
+    }
 
-    document.getElementById('completedFrames').innerText = filledCount;
-    document.getElementById('totalScore').innerText = currentTotal;
-  }
+    function updateRuleBadgeText() {
+      if (gameConfig.rulePattern === 'A') {
+        document.getElementById('ruleBadgeText').textContent = 
+          `【パターンA】基準:${gameConfig.threshold}点 | ストライク:差×${gameConfig.multiplier}≧${gameConfig.strikeThreshold} | スプリット:差≧${gameConfig.splitThreshold}点(×${gameConfig.splitMultiplier}) | 最終:×${gameConfig.finalMultiplier}`;
+      } else {
+        document.getElementById('ruleBadgeText').textContent = 
+          `【パターンB】ストライク:素点≧90(最終×${gameConfig.patternB_strikeFinalMult}) | スペア:素点<90&差≧${gameConfig.patternB_spareDiffThreshold}(最終×${gameConfig.patternB_spareFinalMult})`;
+      }
+    }
 
-  window.addEventListener('DOMContentLoaded', initApp);
-</script>
+    function renderTeamNameInputs() {
+      const container = document.getElementById('teamNamesContainer');
+      const count = parseInt(document.getElementById('teamCountInput').value) || 1;
+      
+      const currentInputs = container.querySelectorAll('input');
+      const existingNames = Array.from(currentInputs).map(input => input.value);
+
+      container.innerHTML = '';
+
+      for (let i = 0; i < count; i++) {
+        const defaultName = existingNames[i] || (i < 26 ? `チーム${String.fromCharCode(65 + i)}` : `チーム${i + 1}`);
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = defaultName;
+        input.placeholder = `チーム${i + 1}の名前`;
+        container.appendChild(input);
+      }
+    }
+
+    function startGame() {
+      gameConfig.teamCount = parseInt(document.getElementById('teamCountInput').value) || 2;
+      gameConfig.songCount = parseInt(document.getElementById('songCountInput').value) || 5;
+      gameConfig.rulePattern = document.getElementById('rulePatternSelect').value;
+
+      gameConfig.threshold = parseFloat(document.getElementById('thresholdInput').value) || 90;
+      gameConfig.multiplier = parseFloat(document.getElementById('multiplierInput').value) || 1.3;
+      gameConfig.strikeThreshold = parseFloat(document.getElementById('strikeThresholdInput').value) || 10;
+      gameConfig.strikeBonusMult = parseFloat(document.getElementById('strikeBonusMultInput').value) || 1.3;
+      gameConfig.splitThreshold = parseFloat(document.getElementById('splitThresholdInput').value) ?? 3;
+      gameConfig.splitMultiplier = parseFloat(document.getElementById('splitMultiplierInput').value) ?? 1.2;
+      gameConfig.finalMultiplier = parseFloat(document.getElementById('finalMultiplierInput').value) ?? 1.5;
+
+      gameConfig.patternB_strikeFinalMult = parseFloat(document.getElementById('patternB_strikeFinalMult').value) ?? 2.0;
+      gameConfig.patternB_spareDiffThreshold = parseFloat(document.getElementById('patternB_spareDiffThreshold').value) ?? 0;
+      gameConfig.patternB_spareFinalMult = parseFloat(document.getElementById('patternB_spareFinalMult').value) ?? 1.5;
+
+      const nameInputs = document.querySelectorAll('#teamNamesContainer input');
+      gameConfig.teamNames = Array.from(nameInputs).map((input, idx) => input.value.trim() || `チーム${idx + 1}`);
+
+      updateRuleBadgeText();
+
+      if (!gameState || gameState.length !== gameConfig.teamCount || (gameState[0] && gameState[0].length !== gameConfig.songCount)) {
+        gameState = [];
+        for (let t = 0; t < gameConfig.teamCount; t++) {
+          let songs = [];
+          for (let s = 0; s < gameConfig.songCount; s++) {
+            songs.push({ raw: null, avg: null });
+          }
+          gameState.push(songs);
+        }
+      }
+
+      buildScoreTable();
+
+      document.getElementById('configScreen').style.display = 'none';
+      document.getElementById('gameScreen').style.display = 'flex';
+
+      selectCell(0, 0);
+      recalculateAll();
+      saveToLocalStorage();
+    }
+
+    function backToConfig() {
+      document.getElementById('gameScreen').style.display = 'none';
+      document.getElementById('configScreen').style.display = 'block';
+      saveToLocalStorage();
+    }
+
+    function buildScoreTable() {
+      const theadRow = document.getElementById('scoreTheadRow');
+      const tbody = document.getElementById('scoreTbody');
+
+      theadRow.innerHTML = '<th class="team-header">チーム</th>';
+      for (let i = 1; i <= gameConfig.songCount; i++) {
+        const th = document.createElement('th');
+        th.style.width = '48px';
+        th.style.minWidth = '48px';
+        th.style.maxWidth = '48px';
+        th.textContent = i;
+        theadRow.appendChild(th);
+      }
+      theadRow.innerHTML += '<th style="width: 48px; min-width: 48px; max-width: 48px;">合計</th>';
+
+      tbody.innerHTML = '';
+      for (let t = 0; t < gameConfig.teamCount; t++) {
+        const tr = document.createElement('tr');
+        const color = TEAM_COLORS[t % TEAM_COLORS.length];
+
+        const tdTeam = document.createElement('td');
+        tdTeam.className = 'team-header';
+        tdTeam.style.color = color;
+        tdTeam.textContent = gameConfig.teamNames[t];
+        tr.appendChild(tdTeam);
+
+        for (let s = 0; s < gameConfig.songCount; s++) {
+          const td = document.createElement('td');
+          td.className = 'score-cell';
+          td.dataset.team = t;
+          td.dataset.song = s;
+
+          td.addEventListener('click', () => selectCell(t, s));
+          tr.appendChild(td);
+        }
+
+        const tdTotal = document.createElement('td');
+        tdTotal.className = 'total-cell';
+        tdTotal.id = `total-team-${t}`;
+        tdTotal.textContent = '0';
+        tr.appendChild(tdTotal);
+
+        tbody.appendChild(tr);
+      }
+    }
+
+    function selectCell(t, s) {
+      selectedCell = { team: t, song: s };
+
+      document.querySelectorAll('.score-cell').forEach(cell => {
+        cell.classList.remove('selected-cell');
+      });
+      const targetCell = document.querySelector(`.score-cell[data-team="${t}"][data-song="${s}"]`);
+      if (targetCell) {
+        targetCell.classList.add('selected-cell');
+      }
+
+      const data = gameState[t][s];
+      if (data && data.raw !== null && data.avg !== null) {
+        document.getElementById('rawScore').value = data.raw;
+        document.getElementById('avgScore').value = data.avg;
+      } else {
+        document.getElementById('rawScore').value = '';
+        document.getElementById('avgScore').value = '';
+      }
+
+      updateTurnDisplay();
+    }
+
+    function setScore() {
+      const rawInput = document.getElementById('rawScore').value;
+      const avgInput = document.getElementById('avgScore').value;
+
+      if (rawInput === '' || avgInput === '') {
+        alert('素点と平均点を入力をしてください。');
+        return;
+      }
+
+      const { team, song } = selectedCell;
+      const raw = parseFloat(rawInput);
+      const avg = parseFloat(avgInput);
+      const diff = raw - avg;
+      const isFinal = (song === gameConfig.songCount - 1);
+
+      let isStrike = false;
+      let isSpare = false;
+      let isSplit = false;
+
+      if (gameConfig.rulePattern === 'A') {
+        isStrike = (raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
+        isSpare = (raw >= gameConfig.threshold) && !isStrike;
+        isSplit = (raw < gameConfig.threshold) && (diff >= gameConfig.splitThreshold);
+      } else {
+        isStrike = (raw >= 90);
+        isSpare = (raw < 90) && (diff >= gameConfig.patternB_spareDiffThreshold);
+      }
+
+      let roleText = '';
+      if (isStrike) roleText = '【ストライク】';
+      else if (isSpare) roleText = '【スペア】';
+      else if (isSplit) roleText = '【スプリット】';
+      else if (diff <= 0) roleText = '【G】';
+
+      let msg = `【セット完了】\n${gameConfig.teamNames[team]} (第${song + 1}曲目)\n素点: ${raw} 点 / 平均: ${avg} 点`;
+      if (roleText) {
+        msg += ` ${roleText}`;
+      }
+      if ((isStrike || (gameConfig.rulePattern === 'B' && isSpare)) && !isFinal) {
+        msg += `\n※ボーナス（次回分）は次曲入力後に確定します`;
+      }
+
+      alert(msg);
+
+      gameState[team][song] = { raw: raw, avg: avg };
+
+      recalculateAll();
+      saveToLocalStorage();
+
+      const next = getNextTurnInfo();
+      if (next) {
+        selectCell(next.teamIndex, next.songIndex);
+      } else {
+        updateTurnDisplay();
+        showFinalResultModal();
+      }
+    }
+
+    function getNextTurnInfo() {
+      for (let song = 0; song < gameConfig.songCount; song++) {
+        for (let t = 0; t < gameConfig.teamCount; t++) {
+          const data = gameState[t][song];
+          if (!data || data.raw === null) {
+            return { teamIndex: t, songIndex: song };
+          }
+        }
+      }
+      return null;
+    }
+
+    function recalculateAll() {
+      const miniTotalsContainer = document.getElementById('miniTotals');
+      miniTotalsContainer.innerHTML = '';
+      computedTotals = [];
+
+      for (let t = 0; t < gameConfig.teamCount; t++) {
+        let songResults = [];
+
+        for (let s = 0; s < gameConfig.songCount; s++) {
+          let data = gameState[t] ? gameState[t][s] : null;
+
+          if (data && data.raw !== null && data.avg !== null) {
+            let diff = data.raw - data.avg;
+            let isFinal = (s === gameConfig.songCount - 1);
+
+            let isStrike = false;
+            let isSpare = false;
+            let isSplit = false;
+            let basePoint = 0;
+
+            if (gameConfig.rulePattern === 'A') {
+              isStrike = (data.raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
+              isSpare = (data.raw >= gameConfig.threshold) && !isStrike;
+              isSplit = (data.raw < gameConfig.threshold) && (diff >= gameConfig.splitThreshold);
+
+              if (isFinal) {
+                basePoint = data.raw + diff * gameConfig.finalMultiplier;
+              } else if (data.raw >= gameConfig.threshold) {
+                basePoint = data.raw + diff * gameConfig.multiplier;
+              } else if (isSplit) {
+                basePoint = data.raw + diff * gameConfig.splitMultiplier;
+              } else {
+                basePoint = 2 * data.raw - data.avg;
+              }
+            } else { // パターンB
+              isStrike = (data.raw >= 90);
+              isSpare = (data.raw < 90) && (diff >= gameConfig.patternB_spareDiffThreshold);
+
+              if (isFinal) {
+                if (isStrike) {
+                  basePoint = data.raw + diff * gameConfig.patternB_strikeFinalMult;
+                } else if (isSpare) {
+                  basePoint = data.raw + diff * gameConfig.patternB_spareFinalMult;
+                } else {
+                  basePoint = data.raw + diff;
+                }
+              } else {
+                basePoint = data.raw + diff;
+              }
+            }
+
+            songResults.push({
+              isEntered: true,
+              basePoint: basePoint,
+              diff: diff,
+              raw: data.raw,
+              avg: data.avg,
+              isStrike: isStrike,
+              isSpare: isSpare,
+              isSplit: isSplit,
+              isFinal: isFinal
+            });
+          } else {
+            songResults.push({
+              isEntered: false,
+              basePoint: 0,
+              diff: 0,
+              raw: null,
+              avg: null,
+              isStrike: false,
+              isSpare: false,
+              isSplit: false,
+              isFinal: false
+            });
+          }
+        }
+
+        let cumulative = 0;
+        let prevCalculated = true;
+        let totalScore = 0;
+
+        for (let s = 0; s < gameConfig.songCount; s++) {
+          let res = songResults[s];
+          let displayTL = "";
+          let displayTR = "";
+          let displayB = "";
+
+          if (res.isEntered) {
+            displayTL = Math.round(res.raw);
+            let bonusPt = null;
+
+            if (gameConfig.rulePattern === 'A') {
+              if (res.isStrike && !res.isFinal) {
+                if (s + 1 < gameConfig.songCount && songResults[s + 1].isEntered) {
+                  let nextRes = songResults[s + 1];
+                  let bonus = nextRes.diff * gameConfig.multiplier;
+                  if (nextRes.raw >= gameConfig.threshold) {
+                    bonus *= gameConfig.strikeBonusMult;
+                  }
+                  bonusPt = Math.round((res.basePoint - res.raw) + bonus);
+                } else {
+                  bonusPt = null;
+                }
+              } else {
+                bonusPt = Math.round(res.basePoint - res.raw);
+              }
+            } else { // パターンB
+              if (res.isStrike && !res.isFinal) {
+                if (s + 1 < gameConfig.songCount && songResults[s + 1].isEntered) {
+                  let nextRes = songResults[s + 1];
+                  bonusPt = Math.round(res.diff + (nextRes.diff * 2));
+                } else {
+                  bonusPt = null;
+                }
+              } else if (res.isSpare && !res.isFinal) {
+                if (s + 1 < gameConfig.songCount && songResults[s + 1].isEntered) {
+                  let nextRes = songResults[s + 1];
+                  bonusPt = Math.round(res.diff + nextRes.diff);
+                } else {
+                  bonusPt = null;
+                }
+              } else {
+                bonusPt = Math.round(res.basePoint - res.raw);
+              }
+            }
+
+            // 右上マスの表示制御 (SVG描画 / G / 通常計算数値)
+            if (res.isStrike) {
+              displayTR = STRIKE_SVG;
+            } else if (res.isSpare) {
+              displayTR = SPARE_SVG;
+            } else if (res.diff <= 0) {
+              displayTR = "G";
+            } else {
+              displayTR = (bonusPt !== null) ? bonusPt : "";
+            }
+
+            if (bonusPt !== null) {
+              if (s === 0 || prevCalculated) {
+                let frameTotal = Math.round(res.raw) + bonusPt;
+                cumulative += frameTotal;
+                displayB = cumulative;
+                totalScore = cumulative;
+                prevCalculated = true;
+              } else {
+                displayB = "";
+                prevCalculated = false;
+              }
+            } else {
+              displayB = "";
+              prevCalculated = false;
+            }
+          }
+
+          const cell = document.querySelector(`.score-cell[data-team="${t}"][data-song="${s}"]`);
+          if (cell) {
+            cell.innerHTML = `
+              <div class="bowling-cell">
+                <div class="cell-top">
+                  <div class="cell-tl">${displayTL !== "" ? displayTL : ""}</div>
+                  <div class="cell-tr">${displayTR !== "" ? displayTR : ""}</div>
+                </div>
+                <div class="cell-bottom">${displayB !== "" ? displayB : ""}</div>
+              </div>
+            `;
+          }
+        }
+
+        let roundedTotal = Math.round(totalScore);
+        computedTotals[t] = roundedTotal;
+
+        const totalCell = document.getElementById(`total-team-${t}`);
+        if (totalCell) {
+          totalCell.textContent = roundedTotal;
+        }
+
+        const color = TEAM_COLORS[t % TEAM_COLORS.length];
+        const badge = document.createElement('div');
+        badge.className = 'mini-total-badge';
+        badge.style.backgroundColor = color;
+        badge.textContent = `${gameConfig.teamNames[t]}: ${roundedTotal} pt`;
+        miniTotalsContainer.appendChild(badge);
+      }
+    }
+
+    // 最終結果モーダル表示
+    function showFinalResultModal() {
+      let results = [];
+      let totalSum = 0;
+
+      for (let t = 0; t < gameConfig.teamCount; t++) {
+        let score = computedTotals[t] || 0;
+        results.push({
+          teamIndex: t,
+          name: gameConfig.teamNames[t],
+          score: score
+        });
+        totalSum += score;
+      }
+
+      results.sort((a, b) => b.score - a.score);
+
+      let currentRank = 1;
+      results.forEach((res, i) => {
+        if (i > 0 && res.score < results[i - 1].score) {
+          currentRank = i + 1;
+        }
+        res.rank = currentRank;
+      });
+
+      const teamCount = gameConfig.teamCount;
+      const topScore = results[0].score;
+      const averageScore = totalSum / teamCount;
+
+      let msg = "🎉 全曲の入力が完了しました！\n\n";
+
+      if (teamCount === 2) {
+        const diff = results[0].score - results[1].score;
+        msg += "【順位結果】\n";
+        results.forEach(res => {
+          let rankLabel = res.rank === 1 ? "🥇 1位" : "🥈 2位";
+          if (res.rank === 1) {
+            msg += `${rankLabel}: ${res.name} (${res.score} pt) 👑 WINNER!\n`;
+          } else {
+            msg += `${rankLabel}: ${res.name} (${res.score} pt)\n`;
+          }
+        });
+        if (diff === 0) {
+          msg += "\n（引き分けです！）";
+        } else {
+          msg += `\n（勝者との点差: ${diff} pt）`;
+        }
+      } else {
+        msg += `【全チーム合計平均 (基準点): ${averageScore.toFixed(1)} pt】\n\n`;
+        
+        results.forEach(res => {
+          let medal = "";
+          if (res.rank === 1) medal = "🥇 ";
+          else if (res.rank === 2) medal = "🥈 ";
+          else if (res.rank === 3) medal = "🥉 ";
+
+          let rankStr = `${medal}${res.rank}位`;
+
+          let diffFromAvg = res.score - averageScore;
+          let avgDiffStr = diffFromAvg > 0 ? `+${diffFromAvg.toFixed(1)}` : diffFromAvg.toFixed(1);
+          if (diffFromAvg === 0) avgDiffStr = "±0.0";
+
+          let diffFromTop = res.score - topScore;
+
+          if (res.rank === 1) {
+            msg += `${rankStr}: ${res.name} (${res.score} pt)\n  └ 基準点差: ${avgDiffStr} pt\n`;
+          } else {
+            msg += `${rankStr}: ${res.name} (${res.score} pt)\n  └ 基準点差: ${avgDiffStr} pt / トップ差: ${diffFromTop} pt\n`;
+          }
+        });
+      }
+
+      document.getElementById('resultTextContainer').textContent = msg;
+      document.getElementById('resultModal').style.display = 'flex';
+    }
+
+    function closeResultModal() {
+      document.getElementById('resultModal').style.display = 'none';
+    }
+
+    // スコア表＆内訳表をまとめたPDFの出力処理
+    function exportToPDF() {
+      const btn = document.getElementById('pdfExportBtn');
+      if (btn) btn.textContent = '⏳ PDF生成中...';
+
+      const element = document.createElement('div');
+      element.style.padding = '8px 12px';
+      element.style.fontFamily = '"Helvetica Neue", Arial, sans-serif';
+      element.style.color = '#333';
+      element.style.backgroundColor = '#ffffff';
+      element.style.width = '700px';
+      element.style.boxSizing = 'border-box';
+
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('ja-JP') + ' ' + now.toLocaleTimeString('ja-JP', {hour: '2-digit', minute:'2-digit'});
+
+      let html = `<h1 style="text-align:center; font-size: 15px; margin-top: 0; margin-bottom: 2px; color: #2c3e50;">ボウリングカラオケ 最終スコア結果</h1>`;
+      html += `<p style="text-align:right; font-size: 8px; color: #666; margin-bottom: 6px;">出力日時: ${dateStr}</p>`;
+
+      // 1. 順位結果サマリー
+      const resultText = document.getElementById('resultTextContainer').innerText;
+      html += `<div style="background: #f0f7ff; border: 1px solid #b3d7ff; padding: 6px 8px; border-radius: 4px; margin-bottom: 8px;">
+        <h2 style="font-size: 11px; margin-top: 0; margin-bottom: 4px; color: #2c3e50;">【最終順位結果】</h2>
+        <pre style="font-size: 9px; font-family: inherit; margin: 0; white-space: pre-wrap; line-height: 1.3;">${resultText}</pre>
+      </div>`;
+
+      // 2. 全体スコア表
+      html += `<h2 style="font-size: 11px; margin-top: 0; margin-bottom: 4px; border-bottom: 2px solid #27ae60; padding-bottom: 1px; color: #27ae60;">■ 全体スコア表</h2>`;
+      
+      let scoreTableHtml = `<table style="width:auto; border-collapse:collapse; text-align:center; font-size:9px; margin-bottom:8px; table-layout:fixed;">`;
+      scoreTableHtml += `<thead><tr style="background:#eee;">
+        <th style="border:1px solid #333; padding:3px; width:75px;">チーム</th>`;
+      for (let i = 1; i <= gameConfig.songCount; i++) {
+        scoreTableHtml += `<th style="border:1px solid #333; padding:3px; width:48px;">${i}</th>`;
+      }
+      scoreTableHtml += `<th style="border:1px solid #333; padding:3px; width:48px; background:#e0e0e0;">合計</th></tr></thead><tbody>`;
+
+      for (let t = 0; t < gameConfig.teamCount; t++) {
+        const color = TEAM_COLORS[t % TEAM_COLORS.length];
+        scoreTableHtml += `<tr>`;
+        scoreTableHtml += `<td style="border:1px solid #333; padding:3px; font-weight:bold; color:${color}; width:75px;">${gameConfig.teamNames[t]}</td>`;
+        
+        for (let s = 0; s < gameConfig.songCount; s++) {
+          const cell = document.querySelector(`.score-cell[data-team="${t}"][data-song="${s}"]`);
+          const text = cell ? cell.innerHTML : '';
+          scoreTableHtml += `<td style="border:1px solid #333; padding:0; width:48px; height:36px;">${text}</td>`;
+        }
+        scoreTableHtml += `<td style="border:1px solid #333; padding:3px; font-weight:bold; background:#f9f9f9; color:#d35400; width:48px;">${computedTotals[t] || 0}</td>`;
+        scoreTableHtml += `</tr>`;
+      }
+      scoreTableHtml += `</tbody></table>`;
+      html += scoreTableHtml;
+
+      // 3. 詳細内訳表
+      html += `<h2 style="font-size: 11px; margin-top: 0; margin-bottom: 4px; border-bottom: 2px solid #3498db; padding-bottom: 1px; color: #3498db;">■ スコア詳細・内訳</h2>`;
+      html += generateDetailHTML(true);
+
+      element.innerHTML = html;
+
+      const opt = {
+        margin:       [5, 5, 5, 5],
+        filename:     `bowling_score_${new Date().toISOString().slice(0,10)}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(element).save().then(() => {
+        if (btn) btn.textContent = '📄 スコア表＆内訳をPDF出力';
+      }).catch(err => {
+        console.error('PDF出力エラー:', err);
+        if (btn) btn.textContent = '📄 スコア表＆内訳をPDF出力';
+      });
+    }
+
+    function updateTurnDisplay() {
+      const { team, song } = selectedCell;
+      const teamText = document.getElementById('currentTeamText');
+      const roundText = document.getElementById('currentRoundText');
+      const setBtn = document.getElementById('setBtn');
+
+      const rows = document.querySelectorAll('#scoreTbody tr');
+      const targetRow = rows[team];
+      if (targetRow) {
+        const teamNameHeader = targetRow.querySelector('.team-header');
+        teamText.textContent = teamNameHeader.textContent;
+        teamText.style.color = teamNameHeader.style.color;
+        roundText.textContent = song + 1;
+      }
+
+      if (gameState[team] && gameState[team][song] && gameState[team][song].raw !== null) {
+        setBtn.textContent = '更新';
+      } else {
+        setBtn.textContent = 'セット';
+      }
+    }
+
+    // 内訳HTML生成
+    function generateDetailHTML(isPdf = false) {
+      let html = '';
+      const cellPadding = isPdf ? '2px 3px' : '4px';
+      const fontSize = isPdf ? '9px' : '11px';
+      const headerFontSize = isPdf ? '9px' : '10px';
+      const tableMargin = isPdf ? '6px' : '12px';
+
+      for (let t = 0; t < gameConfig.teamCount; t++) {
+        const color = TEAM_COLORS[t % TEAM_COLORS.length];
+        
+        let totalRaw = 0;
+        let totalAvg = 0;
+        let enteredCount = 0;
+        let totalFinalPoint = 0;
+
+        for (let s = 0; s < gameConfig.songCount; s++) {
+          const data = gameState[t][s];
+          if (data && data.raw !== null && data.avg !== null) {
+            totalRaw += data.raw;
+            totalAvg += data.avg;
+            enteredCount++;
+          }
+        }
+
+        const rawAvg = enteredCount > 0 ? (totalRaw / enteredCount) : 0;
+        const avgSummaryText = enteredCount > 0 
+          ? `素点合計: ${totalRaw.toFixed(1)}点 / 素点平均: ${rawAvg.toFixed(2)}点` 
+          : `未入力`;
+
+        html += `
+          <div class="detail-team-title" style="font-size: ${isPdf ? '11px' : '14px'}; margin-top: ${isPdf ? '4px' : '10px'}; margin-bottom: 2px;">
+            <span style="color: ${color};">■ ${gameConfig.teamNames[t]}</span>
+            <span class="detail-team-summary" style="font-size: ${isPdf ? '9px' : '11px'}; padding: 1px 4px;">${avgSummaryText}</span>
+          </div>
+          <table class="detail-table" style="width:100%; border-collapse:collapse; margin-bottom:${tableMargin}; text-align:center; font-size:${fontSize};">
+            <thead>
+              <tr style="background:#f8f9fa;">
+                <th style="border:1px solid #ccc; padding:${cellPadding}; font-size:${headerFontSize};">曲</th>
+                <th style="border:1px solid #ccc; padding:${cellPadding}; font-size:${headerFontSize};">素点</th>
+                <th style="border:1px solid #ccc; padding:${cellPadding}; font-size:${headerFontSize};">全国平均</th>
+                <th style="border:1px solid #ccc; padding:${cellPadding}; font-size:${headerFontSize};">平均差</th>
+                <th style="border:1px solid #ccc; padding:${cellPadding}; font-size:${headerFontSize};">判定</th>
+                <th style="border:1px solid #ccc; padding:${cellPadding}; font-size:${headerFontSize};">基本pt</th>
+                <th style="border:1px solid #ccc; padding:${cellPadding}; font-size:${headerFontSize};">ボーナス</th>
+                <th style="border:1px solid #ccc; padding:${cellPadding}; font-size:${headerFontSize};">小計</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        for (let s = 0; s < gameConfig.songCount; s++) {
+          const data = gameState[t][s];
+          if (data && data.raw !== null && data.avg !== null) {
+            let diff = data.raw - data.avg;
+            let isFinal = (s === gameConfig.songCount - 1);
+
+            let isStrike = false;
+            let isSpare = false;
+            let isSplit = false;
+
+            if (gameConfig.rulePattern === 'A') {
+              isStrike = (data.raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
+              isSpare = (data.raw >= gameConfig.threshold) && !isStrike;
+              isSplit = (data.raw < gameConfig.threshold) && (diff >= gameConfig.splitThreshold);
+            } else { // パターンB
+              isStrike = (data.raw >= 90);
+              isSpare = (data.raw < 90) && (diff >= gameConfig.patternB_spareDiffThreshold);
+            }
+
+            // この曲の最終計算ポイント (finalPoint)
+            let finalPoint = 0;
+            let isPending = false;
+
+            if (gameConfig.rulePattern === 'A') {
+              if (isFinal) {
+                finalPoint = data.raw + diff * gameConfig.finalMultiplier;
+              } else if (isStrike) {
+                if (s + 1 < gameConfig.songCount && gameState[t][s + 1] && gameState[t][s + 1].raw !== null) {
+                  let nextData = gameState[t][s + 1];
+                  let nextDiff = nextData.raw - nextData.avg;
+                  let bonusAdd = nextDiff * gameConfig.multiplier;
+                  if (nextData.raw >= gameConfig.threshold) {
+                    bonusAdd *= gameConfig.strikeBonusMult;
+                  }
+                  finalPoint = data.raw + diff * gameConfig.multiplier + bonusAdd;
+                } else {
+                  isPending = true;
+                }
+              } else if (data.raw >= gameConfig.threshold) {
+                finalPoint = data.raw + diff * gameConfig.multiplier;
+              } else if (isSplit) {
+                finalPoint = data.raw + diff * gameConfig.splitMultiplier;
+              } else {
+                finalPoint = 2 * data.raw - data.avg;
+              }
+            } else { // パターンB
+              if (isFinal) {
+                if (isStrike) {
+                  finalPoint = data.raw + diff * gameConfig.patternB_strikeFinalMult;
+                } else if (isSpare) {
+                  finalPoint = data.raw + diff * gameConfig.patternB_spareFinalMult;
+                } else {
+                  finalPoint = data.raw + diff;
+                }
+              } else if (isStrike) {
+                if (s + 1 < gameConfig.songCount && gameState[t][s + 1] && gameState[t][s + 1].raw !== null) {
+                  let nextData = gameState[t][s + 1];
+                  let nextDiff = nextData.raw - nextData.avg;
+                  finalPoint = data.raw + diff + nextDiff * 2;
+                } else {
+                  isPending = true;
+                }
+              } else if (isSpare) {
+                if (s + 1 < gameConfig.songCount && gameState[t][s + 1] && gameState[t][s + 1].raw !== null) {
+                  let nextData = gameState[t][s + 1];
+                  let nextDiff = nextData.raw - nextData.avg;
+                  finalPoint = data.raw + diff + nextDiff;
+                } else {
+                  isPending = true;
+                }
+              } else {
+                finalPoint = data.raw + diff;
+              }
+            }
+
+            // 基本ptは「2×素点 - 平均」（＝ 素点 ＋ 平均差）
+            const standardBase = 2 * data.raw - data.avg;
+            const basePtVal = Math.round(standardBase);
+
+            let bonusText = "-";
+            let subtotalText = "-";
+
+            if (isPending) {
+              bonusText = "(次曲待ち)";
+              subtotalText = "(未確定)";
+            } else {
+              let roundedFinal = Math.round(finalPoint);
+              // 「2×素点-平均」からの増減分をすべてボーナスに計上
+              let bonusVal = roundedFinal - basePtVal;
+              if (bonusVal > 0) {
+                bonusText = `+${bonusVal} pt`;
+              } else if (bonusVal < 0) {
+                bonusText = `${bonusVal} pt`;
+              } else {
+                bonusText = `-`;
+              }
+              subtotalText = `<b>${roundedFinal} pt</b>`;
+              totalFinalPoint += roundedFinal;
+            }
+
+            let judgeText = "通常";
+            if (isStrike) judgeText = "ストライク";
+            else if (isSpare) judgeText = "スペア";
+            else if (isSplit) judgeText = "スプリット";
+            else if (diff <= 0) judgeText = "G";
+
+            if (isFinal) judgeText += " (最終)";
+
+            html += `
+              <tr>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">第${s + 1}曲</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">${data.raw} 点</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">${data.avg} 点</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">${diff > 0 ? '+' : ''}${diff.toFixed(1)}</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};"><b>${judgeText}</b></td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">${basePtVal} pt</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">${bonusText}</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">${subtotalText}</td>
+              </tr>
+            `;
+          } else {
+            html += `
+              <tr>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">第${s + 1}曲</td>
+                <td colspan="7" style="border:1px solid #ccc; padding:${cellPadding}; color: #999;">- 未入力 -</td>
+              </tr>
+            `;
+          }
+        }
+
+        if (enteredCount > 0) {
+          const diffSum = totalRaw - totalAvg;
+          const diffAvg = diffSum / enteredCount;
+          const avgAvg = totalAvg / enteredCount;
+
+          html += `
+            <tfoot>
+              <tr style="background-color: #f0f4f8;">
+                <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">合計</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">${totalRaw.toFixed(1)}点</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">${totalAvg.toFixed(1)}点</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">${diffSum > 0 ? '+' : ''}${diffSum.toFixed(1)}</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">-</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">-</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">-</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">${totalFinalPoint}pt</td>
+              </tr>
+              <tr style="background-color: #e8f8f8;">
+                <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">平均</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">${rawAvg.toFixed(2)}点</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">${avgAvg.toFixed(2)}点</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">${diffAvg > 0 ? '+' : ''}${diffAvg.toFixed(2)}</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">-</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">-</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding};">-</td>
+                <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">${(totalFinalPoint / enteredCount).toFixed(1)}pt</td>
+              </tr>
+            </tfoot>
+          `;
+        }
+        html += `</table>`;
+      }
+      return html;
+    }
+
+    function openDetailModal() {
+      const container = document.getElementById('modalBodyContainer');
+      container.innerHTML = generateDetailHTML(false);
+      document.getElementById('detailModal').style.display = 'flex';
+    }
+
+    function closeDetailModal() {
+      document.getElementById('detailModal').style.display = 'none';
+    }
+
+    function resetGame() {
+      if (!confirm('スコア表の数字をクリアしますか？')) return;
+      for (let t = 0; t < gameConfig.teamCount; t++) {
+        for (let s = 0; s < gameConfig.songCount; s++) {
+          gameState[t][s] = { raw: null, avg: null };
+        }
+      }
+      selectCell(0, 0);
+      recalculateAll();
+      saveToLocalStorage();
+    }
+  </script>
 </body>
 </html>
