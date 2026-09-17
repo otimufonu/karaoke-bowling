@@ -168,7 +168,7 @@
       border: 1px solid #333;
       padding: 0;
       font-size: 12px;
-      min-width: 46px;
+      min-width: 48px;
       height: 46px;
     }
 
@@ -228,8 +228,25 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 11px;
+      font-size: 9.5px;
       color: #333;
+      overflow: hidden;
+      white-space: nowrap;
+      position: relative;
+    }
+
+    /* ストライク：白文字に赤塗り潰し */
+    .cell-tr.badge-strike {
+      background-color: #e74c3c;
+      color: #ffffff;
+      font-weight: bold;
+    }
+
+    /* スペア：黒文字に右下にのみ赤がかかるデザイン */
+    .cell-tr.badge-spare {
+      background: linear-gradient(135deg, #ffffff 50%, #e74c3c 50%);
+      color: #111111;
+      font-weight: bold;
     }
 
     .cell-bottom {
@@ -585,7 +602,7 @@
         </table>
       </div>
 
-      <div class="note">※ 左上:素点 / 右上:ボーナス / 下:累計。<b>マス目クリックで編集</b></div>
+      <div class="note">※ 左上:素点 / 右上:判定・ボーナス / 下:累計。<b>マス目クリックで編集</b></div>
 
       <div class="btn-action-container">
         <button class="btn-info" onclick="openDetailModal()">📊 内訳</button>
@@ -1026,6 +1043,7 @@
           let res = songResults[s];
           let displayTL = "";
           let displayTR = "";
+          let trClass = "";
           let displayB = "";
 
           if (res.isEntered) {
@@ -1068,9 +1086,19 @@
               }
             }
 
-            if (bonusPt !== null) {
-              displayTR = bonusPt;
+            // 右上マスの表示・デザイン指定処理
+            if (res.isStrike) {
+              trClass = "badge-strike";
+              displayTR = (bonusPt !== null) ? `✕ ${bonusPt}` : "✕";
+            } else if (res.isSpare) {
+              trClass = "badge-spare";
+              displayTR = (bonusPt !== null) ? `╱ ${bonusPt}` : "╱";
+            } else {
+              trClass = "";
+              displayTR = (bonusPt !== null) ? bonusPt : "";
+            }
 
+            if (bonusPt !== null) {
               if (s === 0 || prevCalculated) {
                 let frameTotal = Math.round(res.raw) + bonusPt;
                 cumulative += frameTotal;
@@ -1082,7 +1110,6 @@
                 prevCalculated = false;
               }
             } else {
-              displayTR = "";
               displayB = "";
               prevCalculated = false;
             }
@@ -1094,7 +1121,7 @@
               <div class="bowling-cell">
                 <div class="cell-top">
                   <div class="cell-tl">${displayTL !== "" ? displayTL : ""}</div>
-                  <div class="cell-tr">${displayTR !== "" ? displayTR : ""}</div>
+                  <div class="cell-tr ${trClass}">${displayTR !== "" ? displayTR : ""}</div>
                 </div>
                 <div class="cell-bottom">${displayB !== "" ? displayB : ""}</div>
               </div>
@@ -1242,7 +1269,7 @@
         for (let s = 0; s < gameConfig.songCount; s++) {
           const cell = document.querySelector(`.score-cell[data-team="${t}"][data-song="${s}"]`);
           const text = cell ? cell.innerHTML : '';
-          scoreTableHtml += `<td style="border:1px solid #333; padding:0; width:45px; height:45px;">${text}</td>`;
+          scoreTableHtml += `<td style="border:1px solid #333; padding:0; width:48px; height:46px;">${text}</td>`;
         }
         scoreTableHtml += `<td style="border:1px solid #333; padding:5px; font-weight:bold; background:#f9f9f9; color:#d35400;">${computedTotals[t] || 0}</td>`;
         scoreTableHtml += `</tr>`;
