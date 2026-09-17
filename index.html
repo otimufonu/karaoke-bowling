@@ -99,7 +99,7 @@
       font-size: 11px;
     }
 
-    input[type="number"], input[type="text"] {
+    input[type="number"], input[type="text"], select {
       width: 100%;
       padding: 6px 8px;
       font-size: 14px;
@@ -452,9 +452,18 @@
       <div id="teamNamesContainer" class="team-name-inputs"></div>
     </div>
 
-    <!-- 詳細ルール設定エリア -->
-    <div class="rule-box">
-      <h3>計算＆ボウリング判定ルール設定</h3>
+    <!-- ルールパターン選択 -->
+    <div class="form-group" style="margin-top: 8px;">
+      <label for="rulePatternSelect">計算ルールパターン:</label>
+      <select id="rulePatternSelect" onchange="toggleRulePatternUI()">
+        <option value="A">パターンA（従来ルール）</option>
+        <option value="B" selected>パターンB（新ルール）</option>
+      </select>
+    </div>
+
+    <!-- 詳細ルール設定エリア：パターンA -->
+    <div id="ruleBoxA" class="rule-box" style="display: none;">
+      <h3>【パターンA】計算＆ボウリング判定ルール設定</h3>
       
       <div class="inline-inputs">
         ① ボーナス基準素点:
@@ -495,6 +504,39 @@
         <input type="number" id="finalMultiplierInput" value="1.5" step="0.1"> 倍
       </div>
       <div class="rule-desc">※最終曲のポイント ＝ 【 素点 ＋ (素点 － 全国平均) × 最終曲倍率 】</div>
+    </div>
+
+    <!-- 詳細ルール設定エリア：パターンB -->
+    <div id="ruleBoxB" class="rule-box">
+      <h3>【パターンB】新ルール設定</h3>
+      <div class="rule-desc" style="margin-bottom: 6px; font-weight: bold; color: #2c3e50;">基本点数 ＝ 素点 ＋ (素点 － 全国平均)</div>
+      
+      <div style="border-top: 1px dashed #b3d7ff; padding-top: 4px;">
+        <div class="inline-inputs">
+          ① ストライク判定: 素点 ≧ 90 点
+        </div>
+        <div class="rule-desc">通常計算: 素点＋(素点－平均)＋(次回の素点－次回の平均)×2</div>
+        <div class="inline-inputs" style="margin-top:2px;">
+          最終フレームのストライク倍率(△):
+          <input type="number" id="patternB_strikeFinalMult" value="2.0" step="0.1"> 倍
+        </div>
+        <div class="rule-desc">※最終フレーム計算: 素点 ＋ (素点 － 平均) × △</div>
+      </div>
+
+      <div style="border-top: 1px dashed #b3d7ff; padding-top: 4px; margin-top: 6px;">
+        <div class="inline-inputs">
+          ② スペア判定: 素点 ＜ 90 点 かつ (素点 － 平均) ≧
+          <input type="number" id="patternB_spareDiffThreshold" value="0" step="1"> 点 (〇)
+        </div>
+        <div class="rule-desc">通常計算: 素点＋(素点－平均)＋(次回の素点－次回の平均)</div>
+        <div class="inline-inputs" style="margin-top:2px;">
+          最終フレームのスペア倍率(☆):
+          <input type="number" id="patternB_spareFinalMult" value="1.5" step="0.1"> 倍
+        </div>
+        <div class="rule-desc">※最終フレーム計算: 素点 ＋ (素点 － 平均) × ☆</div>
+      </div>
+
+      <div class="rule-desc" style="margin-top: 6px; color: #888;">※パターンBではスプリット判定・ボーナスはありません。</div>
     </div>
 
     <button class="btn-main" onclick="startGame()">ゲーム開始</button>
@@ -593,13 +635,19 @@
       teamCount: 2,
       songCount: 5,
       teamNames: [],
+      rulePattern: 'B', // 'A' または 'B'
+      // パターンA設定
       threshold: 90,
       multiplier: 1.3,
       strikeThreshold: 10,
       strikeBonusMult: 1.3,
       splitThreshold: 3,
       splitMultiplier: 1.2,
-      finalMultiplier: 1.5
+      finalMultiplier: 1.5,
+      // パターンB設定
+      patternB_strikeFinalMult: 2.0,
+      patternB_spareDiffThreshold: 0,
+      patternB_spareFinalMult: 1.5
     };
 
     let gameState = [];
@@ -608,8 +656,20 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       renderTeamNameInputs();
+      toggleRulePatternUI();
       loadFromLocalStorage();
     });
+
+    function toggleRulePatternUI() {
+      const pattern = document.getElementById('rulePatternSelect').value;
+      if (pattern === 'A') {
+        document.getElementById('ruleBoxA').style.display = 'block';
+        document.getElementById('ruleBoxB').style.display = 'none';
+      } else {
+        document.getElementById('ruleBoxA').style.display = 'none';
+        document.getElementById('ruleBoxB').style.display = 'block';
+      }
+    }
 
     function saveToLocalStorage() {
       const dataToSave = {
@@ -632,6 +692,8 @@
 
           document.getElementById('teamCountInput').value = gameConfig.teamCount;
           document.getElementById('songCountInput').value = gameConfig.songCount;
+          document.getElementById('rulePatternSelect').value = gameConfig.rulePattern || 'B';
+          
           document.getElementById('thresholdInput').value = gameConfig.threshold;
           document.getElementById('multiplierInput').value = gameConfig.multiplier;
           document.getElementById('strikeThresholdInput').value = gameConfig.strikeThreshold;
@@ -640,6 +702,11 @@
           document.getElementById('splitMultiplierInput').value = gameConfig.splitMultiplier ?? 1.2;
           document.getElementById('finalMultiplierInput').value = gameConfig.finalMultiplier ?? 1.5;
 
+          document.getElementById('patternB_strikeFinalMult').value = gameConfig.patternB_strikeFinalMult ?? 2.0;
+          document.getElementById('patternB_spareDiffThreshold').value = gameConfig.patternB_spareDiffThreshold ?? 0;
+          document.getElementById('patternB_spareFinalMult').value = gameConfig.patternB_spareFinalMult ?? 1.5;
+
+          toggleRulePatternUI();
           renderTeamNameInputs();
           const nameInputs = document.querySelectorAll('#teamNamesContainer input');
           gameConfig.teamNames.forEach((name, idx) => {
@@ -662,8 +729,13 @@
     }
 
     function updateRuleBadgeText() {
-      document.getElementById('ruleBadgeText').textContent = 
-        `【現在ルール】基準:${gameConfig.threshold}点 | ✕:差×${gameConfig.multiplier}≧${gameConfig.strikeThreshold} | 〇:差≧${gameConfig.splitThreshold}点(×${gameConfig.splitMultiplier}) | 最終:×${gameConfig.finalMultiplier}`;
+      if (gameConfig.rulePattern === 'A') {
+        document.getElementById('ruleBadgeText').textContent = 
+          `【パターンA】基準:${gameConfig.threshold}点 | ✕:差×${gameConfig.multiplier}≧${gameConfig.strikeThreshold} | 〇:差≧${gameConfig.splitThreshold}点(×${gameConfig.splitMultiplier}) | 最終:×${gameConfig.finalMultiplier}`;
+      } else {
+        document.getElementById('ruleBadgeText').textContent = 
+          `【パターンB】✕:素点≧90(最終×${gameConfig.patternB_strikeFinalMult}) | ╱:素点<90&差≧${gameConfig.patternB_spareDiffThreshold}(最終×${gameConfig.patternB_spareFinalMult})`;
+      }
     }
 
     function renderTeamNameInputs() {
@@ -688,6 +760,8 @@
     function startGame() {
       gameConfig.teamCount = parseInt(document.getElementById('teamCountInput').value) || 2;
       gameConfig.songCount = parseInt(document.getElementById('songCountInput').value) || 5;
+      gameConfig.rulePattern = document.getElementById('rulePatternSelect').value;
+
       gameConfig.threshold = parseFloat(document.getElementById('thresholdInput').value) || 90;
       gameConfig.multiplier = parseFloat(document.getElementById('multiplierInput').value) || 1.3;
       gameConfig.strikeThreshold = parseFloat(document.getElementById('strikeThresholdInput').value) || 10;
@@ -695,6 +769,10 @@
       gameConfig.splitThreshold = parseFloat(document.getElementById('splitThresholdInput').value) ?? 3;
       gameConfig.splitMultiplier = parseFloat(document.getElementById('splitMultiplierInput').value) ?? 1.2;
       gameConfig.finalMultiplier = parseFloat(document.getElementById('finalMultiplierInput').value) ?? 1.5;
+
+      gameConfig.patternB_strikeFinalMult = parseFloat(document.getElementById('patternB_strikeFinalMult').value) ?? 2.0;
+      gameConfig.patternB_spareDiffThreshold = parseFloat(document.getElementById('patternB_spareDiffThreshold').value) ?? 0;
+      gameConfig.patternB_spareFinalMult = parseFloat(document.getElementById('patternB_spareFinalMult').value) ?? 1.5;
 
       const nameInputs = document.querySelectorAll('#teamNamesContainer input');
       gameConfig.teamNames = Array.from(nameInputs).map((input, idx) => input.value.trim() || `チーム${idx + 1}`);
@@ -809,34 +887,30 @@
       const diff = raw - avg;
       const isFinal = (song === gameConfig.songCount - 1);
 
-      const isStrike = (raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
-      const isSpare = (raw >= gameConfig.threshold) && !isStrike;
-      const isSplit = (raw < gameConfig.threshold) && (diff >= gameConfig.splitThreshold);
+      let isStrike = false;
+      let isSpare = false;
+      let isSplit = false;
 
-      let point = 0;
-      if (isFinal) {
-        point = raw + diff * gameConfig.finalMultiplier;
-      } else if (raw >= gameConfig.threshold) {
-        point = raw + diff * gameConfig.multiplier;
-      } else if (isSplit) {
-        point = raw + diff * gameConfig.splitMultiplier;
+      if (gameConfig.rulePattern === 'A') {
+        isStrike = (raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
+        isSpare = (raw >= gameConfig.threshold) && !isStrike;
+        isSplit = (raw < gameConfig.threshold) && (diff >= gameConfig.splitThreshold);
       } else {
-        point = 2 * raw - avg;
+        isStrike = (raw >= 90);
+        isSpare = (raw < 90) && (diff >= gameConfig.patternB_spareDiffThreshold);
       }
-
-      const roundedPoint = Math.round(point);
 
       let roleText = '';
       if (isStrike) roleText = '【ストライク ✕】';
       else if (isSpare) roleText = '【スペア ╱】';
       else if (isSplit) roleText = '【スプリット 〇】';
 
-      let msg = `【セット完了】\n${gameConfig.teamNames[team]} (第${song + 1}曲目)\n獲得ポイント: ${roundedPoint} pt`;
+      let msg = `【セット完了】\n${gameConfig.teamNames[team]} (第${song + 1}曲目)\n素点: ${raw} 点 / 平均: ${avg} 点`;
       if (roleText) {
         msg += ` ${roleText}`;
       }
-      if (isStrike && !isFinal) {
-        msg += `\n※ストライクボーナスは次曲入力後に加算されます`;
+      if ((isStrike || (gameConfig.rulePattern === 'B' && isSpare)) && !isFinal) {
+        msg += `\n※ボーナス（次回分）は次曲入力後に確定します`;
       }
 
       alert(msg);
@@ -882,19 +956,40 @@
             let diff = data.raw - data.avg;
             let isFinal = (s === gameConfig.songCount - 1);
 
-            let isStrike = (data.raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
-            let isSpare = (data.raw >= gameConfig.threshold) && !isStrike;
-            let isSplit = (data.raw < gameConfig.threshold) && (diff >= gameConfig.splitThreshold);
-
+            let isStrike = false;
+            let isSpare = false;
+            let isSplit = false;
             let basePoint = 0;
-            if (isFinal) {
-              basePoint = data.raw + diff * gameConfig.finalMultiplier;
-            } else if (data.raw >= gameConfig.threshold) {
-              basePoint = data.raw + diff * gameConfig.multiplier;
-            } else if (isSplit) {
-              basePoint = data.raw + diff * gameConfig.splitMultiplier;
-            } else {
-              basePoint = 2 * data.raw - data.avg;
+
+            if (gameConfig.rulePattern === 'A') {
+              isStrike = (data.raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
+              isSpare = (data.raw >= gameConfig.threshold) && !isStrike;
+              isSplit = (data.raw < gameConfig.threshold) && (diff >= gameConfig.splitThreshold);
+
+              if (isFinal) {
+                basePoint = data.raw + diff * gameConfig.finalMultiplier;
+              } else if (data.raw >= gameConfig.threshold) {
+                basePoint = data.raw + diff * gameConfig.multiplier;
+              } else if (isSplit) {
+                basePoint = data.raw + diff * gameConfig.splitMultiplier;
+              } else {
+                basePoint = 2 * data.raw - data.avg;
+              }
+            } else { // パターンB
+              isStrike = (data.raw >= 90);
+              isSpare = (data.raw < 90) && (diff >= gameConfig.patternB_spareDiffThreshold);
+
+              if (isFinal) {
+                if (isStrike) {
+                  basePoint = data.raw + diff * gameConfig.patternB_strikeFinalMult;
+                } else if (isSpare) {
+                  basePoint = data.raw + diff * gameConfig.patternB_spareFinalMult;
+                } else {
+                  basePoint = data.raw + diff;
+                }
+              } else {
+                basePoint = data.raw + diff;
+              }
             }
 
             songResults.push({
@@ -937,22 +1032,40 @@
             displayTL = Math.round(res.raw);
             let bonusPt = null;
 
-            if (res.isStrike && !res.isFinal) {
-              // ストライクかつ最終曲以外
-              if (s + 1 < gameConfig.songCount && songResults[s + 1].isEntered) {
-                let nextRes = songResults[s + 1];
-                let bonus = nextRes.diff * gameConfig.multiplier;
-                if (nextRes.raw >= gameConfig.threshold) {
-                  bonus *= gameConfig.strikeBonusMult;
+            if (gameConfig.rulePattern === 'A') {
+              if (res.isStrike && !res.isFinal) {
+                if (s + 1 < gameConfig.songCount && songResults[s + 1].isEntered) {
+                  let nextRes = songResults[s + 1];
+                  let bonus = nextRes.diff * gameConfig.multiplier;
+                  if (nextRes.raw >= gameConfig.threshold) {
+                    bonus *= gameConfig.strikeBonusMult;
+                  }
+                  bonusPt = Math.round((res.basePoint - res.raw) + bonus);
+                } else {
+                  bonusPt = null;
                 }
-                bonusPt = Math.round((res.basePoint - res.raw) + bonus);
               } else {
-                // 次の点数が確定するまで保留
-                bonusPt = null;
+                bonusPt = Math.round(res.basePoint - res.raw);
               }
-            } else {
-              // 通常・スペア・スプリット・最終曲
-              bonusPt = Math.round(res.basePoint - res.raw);
+            } else { // パターンB
+              if (res.isStrike && !res.isFinal) {
+                if (s + 1 < gameConfig.songCount && songResults[s + 1].isEntered) {
+                  let nextRes = songResults[s + 1];
+                  bonusPt = Math.round(res.diff + (nextRes.diff * 2));
+                } else {
+                  bonusPt = null;
+                }
+              } else if (res.isSpare && !res.isFinal) {
+                if (s + 1 < gameConfig.songCount && songResults[s + 1].isEntered) {
+                  let nextRes = songResults[s + 1];
+                  bonusPt = Math.round(res.diff + nextRes.diff);
+                } else {
+                  bonusPt = null;
+                }
+              } else {
+                // 通常曲、または最終フレームのストライク/スペア
+                bonusPt = Math.round(res.basePoint - res.raw);
+              }
             }
 
             if (bonusPt !== null) {
@@ -1233,39 +1346,90 @@
             let diff = data.raw - data.avg;
             let isFinal = (s === gameConfig.songCount - 1);
 
-            let isStrike = (data.raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
-            let isSpare = (data.raw >= gameConfig.threshold) && !isStrike;
-            let isSplit = (data.raw < gameConfig.threshold) && (diff >= gameConfig.splitThreshold);
-
+            let isStrike = false;
+            let isSpare = false;
+            let isSplit = false;
             let basePoint = 0;
-            if (isFinal) {
-              basePoint = data.raw + diff * gameConfig.finalMultiplier;
-            } else if (data.raw >= gameConfig.threshold) {
-              basePoint = data.raw + diff * gameConfig.multiplier;
-            } else if (isSplit) {
-              basePoint = data.raw + diff * gameConfig.splitMultiplier;
-            } else {
-              basePoint = 2 * data.raw - data.avg;
+
+            if (gameConfig.rulePattern === 'A') {
+              isStrike = (data.raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
+              isSpare = (data.raw >= gameConfig.threshold) && !isStrike;
+              isSplit = (data.raw < gameConfig.threshold) && (diff >= gameConfig.splitThreshold);
+
+              if (isFinal) {
+                basePoint = data.raw + diff * gameConfig.finalMultiplier;
+              } else if (data.raw >= gameConfig.threshold) {
+                basePoint = data.raw + diff * gameConfig.multiplier;
+              } else if (isSplit) {
+                basePoint = data.raw + diff * gameConfig.splitMultiplier;
+              } else {
+                basePoint = 2 * data.raw - data.avg;
+              }
+            } else { // パターンB
+              isStrike = (data.raw >= 90);
+              isSpare = (data.raw < 90) && (diff >= gameConfig.patternB_spareDiffThreshold);
+
+              if (isFinal) {
+                if (isStrike) {
+                  basePoint = data.raw + diff * gameConfig.patternB_strikeFinalMult;
+                } else if (isSpare) {
+                  basePoint = data.raw + diff * gameConfig.patternB_spareFinalMult;
+                } else {
+                  basePoint = data.raw + diff;
+                }
+              } else {
+                basePoint = data.raw + diff;
+              }
             }
 
             let bonus = 0;
             let bonusText = "-";
 
-            if (isStrike && !isFinal) {
-              if (s + 1 < gameConfig.songCount) {
-                let nextData = gameState[t][s + 1];
-                if (nextData && nextData.raw !== null && nextData.avg !== null) {
-                  let nextDiff = nextData.raw - nextData.avg;
-                  bonus = nextDiff * gameConfig.multiplier;
-                  if (nextData.raw >= gameConfig.threshold) {
-                    bonus *= gameConfig.strikeBonusMult;
+            if (gameConfig.rulePattern === 'A') {
+              if (isStrike && !isFinal) {
+                if (s + 1 < gameConfig.songCount) {
+                  let nextData = gameState[t][s + 1];
+                  if (nextData && nextData.raw !== null && nextData.avg !== null) {
+                    let nextDiff = nextData.raw - nextData.avg;
+                    bonus = nextDiff * gameConfig.multiplier;
+                    if (nextData.raw >= gameConfig.threshold) {
+                      bonus *= gameConfig.strikeBonusMult;
+                    }
+                    bonusText = `+${Math.round(bonus)} pt`;
+                  } else {
+                    bonusText = "(次曲待ち)";
                   }
-                  bonusText = `+${Math.round(bonus)} pt`;
                 } else {
-                  bonusText = "(次曲待ち)";
+                  bonusText = "(最終曲)";
                 }
-              } else {
-                bonusText = "(最終曲)";
+              }
+            } else { // パターンB
+              if (isStrike && !isFinal) {
+                if (s + 1 < gameConfig.songCount) {
+                  let nextData = gameState[t][s + 1];
+                  if (nextData && nextData.raw !== null && nextData.avg !== null) {
+                    let nextDiff = nextData.raw - nextData.avg;
+                    bonus = nextDiff * 2;
+                    bonusText = `+${Math.round(bonus)} pt`;
+                  } else {
+                    bonusText = "(次曲待ち)";
+                  }
+                } else {
+                  bonusText = "(最終曲)";
+                }
+              } else if (isSpare && !isFinal) {
+                if (s + 1 < gameConfig.songCount) {
+                  let nextData = gameState[t][s + 1];
+                  if (nextData && nextData.raw !== null && nextData.avg !== null) {
+                    let nextDiff = nextData.raw - nextData.avg;
+                    bonus = nextDiff;
+                    bonusText = `+${Math.round(bonus)} pt`;
+                  } else {
+                    bonusText = "(次曲待ち)";
+                  }
+                } else {
+                  bonusText = "(最終曲)";
+                }
               }
             }
 
