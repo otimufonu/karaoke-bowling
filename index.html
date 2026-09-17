@@ -13,10 +13,10 @@
 
     html, body {
       height: 100%;
-      height: 100dvh; /* iPhoneの動的ツールバーに対応 */
+      height: 100dvh;
       margin: 0;
       padding: 0;
-      overflow: hidden; /* 縦スクロール禁止 */
+      overflow: hidden;
     }
 
     body {
@@ -36,7 +36,6 @@
       margin-bottom: 6px;
     }
 
-    /* ゲーム画面全体をフレックスボックス化 */
     #gameScreen {
       display: flex;
       flex-direction: column;
@@ -124,7 +123,6 @@
       background: #219150;
     }
 
-    /* タイトル横の常時表示合計バッジエリア */
     .score-header-container {
       display: flex;
       align-items: center;
@@ -190,7 +188,6 @@
       padding: 4px 2px;
     }
 
-    /* 各フレームと合計欄の幅を統一 (48px) */
     th:not(.team-header), td.score-cell, td.total-cell {
       width: 48px;
       min-width: 48px;
@@ -215,7 +212,6 @@
       font-weight: bold;
     }
 
-    /* ボウリングスタイルグリッドセル */
     .bowling-cell {
       display: flex;
       flex-direction: column;
@@ -279,6 +275,35 @@
       margin-top: 3px;
       text-align: right;
       flex: 0 0 auto;
+    }
+
+    /* 残り所要時間 */
+    .remaining-time {
+      font-size: 11px;
+      color: #555;
+      text-align: center;
+      margin-top: 4px;
+      padding: 4px 6px;
+      background: #f8f9fa;
+      border: 1px solid #e1e5e8;
+      border-radius: 4px;
+      flex: 0 0 auto;
+    }
+
+    .remaining-time strong {
+      font-size: 13px;
+      color: #2c3e50;
+    }
+
+    .remaining-time.complete {
+      color: #27ae60;
+      font-weight: bold;
+      background: #eafaf1;
+      border-color: #b7e4c7;
+    }
+
+    .remaining-time.complete strong {
+      color: #27ae60;
     }
 
     .btn-action-container {
@@ -358,7 +383,7 @@
       margin-top: 2px;
     }
 
-    /* モーダル (詳細・内訳画面・結果画面) */
+    /* モーダル */
     .modal-overlay {
       position: fixed;
       top: 0;
@@ -601,7 +626,14 @@
         </table>
       </div>
 
-      <div class="note">※ 左上:素点 / 右上:判定記号・計算点 / 下:累計。<b>マス目クリックで編集</b></div>
+      <div class="note">
+        ※ 左上:素点 / 右上:判定記号・計算点 / 下:累計。<b>マス目クリックで編集</b>
+      </div>
+
+      <!-- 残り所要時間表示 -->
+      <div id="remainingTime" class="remaining-time">
+        残り所要時間：<strong>約0分</strong>
+      </div>
 
       <div class="btn-action-container">
         <button class="btn-info" onclick="openDetailModal()">📊 内訳</button>
@@ -642,12 +674,14 @@
   <script>
     const STORAGE_KEY = 'bowling_score_app_data';
 
+    /* 1フレームあたりの想定所要時間（分） */
+    const MINUTES_PER_FRAME = 4;
+
     const TEAM_COLORS = [
       '#e74c3c', '#2980b9', '#27ae60', '#8e44ad', 
       '#e67e22', '#16a085', '#d35400', '#2c3e50'
     ];
 
-    // SVG内の不要な外枠要素(<rect stroke=...>)を除去し、他のマス目のCSS枠線(1px)に合わせた設定
     const STRIKE_SVG = `<svg viewBox="0 0 24 24" style="width:100%; height:100%; display:block;"><polygon points="0,0 12,12 0,24" fill="#000000"/><polygon points="24,0 12,12 24,24" fill="#000000"/><polygon points="0,0 24,0 12,12" fill="#ffffff"/><polygon points="0,24 24,24 12,12" fill="#ffffff"/><line x1="0" y1="0" x2="24" y2="24" stroke="#000000" stroke-width="1"/><line x1="24" y1="0" x2="0" y2="24" stroke="#000000" stroke-width="1"/></svg>`;
 
     const SPARE_SVG = `<svg viewBox="0 0 24 24" style="width:100%; height:100%; display:block;"><polygon points="24,0 24,24 0,24" fill="#000000"/><polygon points="0,0 24,0 0,24" fill="#ffffff"/><line x1="24" y1="0" x2="0" y2="24" stroke="#000000" stroke-width="1"/></svg>`;
@@ -656,7 +690,8 @@
       teamCount: 2,
       songCount: 5,
       teamNames: [],
-      rulePattern: 'B', // 'A' または 'B'
+      rulePattern: 'B',
+
       // パターンA設定
       threshold: 90,
       multiplier: 1.3,
@@ -665,6 +700,7 @@
       splitThreshold: 3,
       splitMultiplier: 1.2,
       finalMultiplier: 1.5,
+
       // パターンB設定
       patternB_strikeFinalMult: 2.0,
       patternB_spareDiffThreshold: 0,
@@ -683,6 +719,7 @@
 
     function toggleRulePatternUI() {
       const pattern = document.getElementById('rulePatternSelect').value;
+
       if (pattern === 'A') {
         document.getElementById('ruleBoxA').style.display = 'block';
         document.getElementById('ruleBoxB').style.display = 'none';
@@ -698,6 +735,7 @@
         gameState: gameState,
         isGameActive: (document.getElementById('gameScreen').style.display === 'flex')
       };
+
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
     }
 
@@ -707,6 +745,7 @@
 
       try {
         const data = JSON.parse(saved);
+
         if (data && data.gameConfig && data.gameState) {
           gameConfig = data.gameConfig;
           gameState = data.gameState;
@@ -714,7 +753,7 @@
           document.getElementById('teamCountInput').value = gameConfig.teamCount;
           document.getElementById('songCountInput').value = gameConfig.songCount;
           document.getElementById('rulePatternSelect').value = gameConfig.rulePattern || 'B';
-          
+
           document.getElementById('thresholdInput').value = gameConfig.threshold;
           document.getElementById('multiplierInput').value = gameConfig.multiplier;
           document.getElementById('strikeThresholdInput').value = gameConfig.strikeThreshold;
@@ -729,14 +768,19 @@
 
           toggleRulePatternUI();
           renderTeamNameInputs();
+
           const nameInputs = document.querySelectorAll('#teamNamesContainer input');
+
           gameConfig.teamNames.forEach((name, idx) => {
-            if (nameInputs[idx]) nameInputs[idx].value = name;
+            if (nameInputs[idx]) {
+              nameInputs[idx].value = name;
+            }
           });
 
           if (data.isGameActive) {
             updateRuleBadgeText();
             buildScoreTable();
+
             document.getElementById('configScreen').style.display = 'none';
             document.getElementById('gameScreen').style.display = 'flex';
 
@@ -751,10 +795,10 @@
 
     function updateRuleBadgeText() {
       if (gameConfig.rulePattern === 'A') {
-        document.getElementById('ruleBadgeText').textContent = 
+        document.getElementById('ruleBadgeText').textContent =
           `【パターンA】基準:${gameConfig.threshold}点 | ストライク:差×${gameConfig.multiplier}≧${gameConfig.strikeThreshold} | スプリット:差≧${gameConfig.splitThreshold}点(×${gameConfig.splitMultiplier}) | 最終:×${gameConfig.finalMultiplier}`;
       } else {
-        document.getElementById('ruleBadgeText').textContent = 
+        document.getElementById('ruleBadgeText').textContent =
           `【パターンB】ストライク:素点≧90(最終×${gameConfig.patternB_strikeFinalMult}) | スペア:素点<90&差≧${gameConfig.patternB_spareDiffThreshold}(最終×${gameConfig.patternB_spareFinalMult})`;
       }
     }
@@ -762,51 +806,94 @@
     function renderTeamNameInputs() {
       const container = document.getElementById('teamNamesContainer');
       const count = parseInt(document.getElementById('teamCountInput').value) || 1;
-      
+
       const currentInputs = container.querySelectorAll('input');
       const existingNames = Array.from(currentInputs).map(input => input.value);
 
       container.innerHTML = '';
 
       for (let i = 0; i < count; i++) {
-        const defaultName = existingNames[i] || (i < 26 ? `チーム${String.fromCharCode(65 + i)}` : `チーム${i + 1}`);
+        const defaultName =
+          existingNames[i] ||
+          (i < 26 ? `チーム${String.fromCharCode(65 + i)}` : `チーム${i + 1}`);
+
         const input = document.createElement('input');
         input.type = 'text';
         input.value = defaultName;
         input.placeholder = `チーム${i + 1}の名前`;
+
         container.appendChild(input);
       }
     }
 
     function startGame() {
-      gameConfig.teamCount = parseInt(document.getElementById('teamCountInput').value) || 2;
-      gameConfig.songCount = parseInt(document.getElementById('songCountInput').value) || 5;
-      gameConfig.rulePattern = document.getElementById('rulePatternSelect').value;
+      gameConfig.teamCount =
+        parseInt(document.getElementById('teamCountInput').value) || 2;
 
-      gameConfig.threshold = parseFloat(document.getElementById('thresholdInput').value) || 90;
-      gameConfig.multiplier = parseFloat(document.getElementById('multiplierInput').value) || 1.3;
-      gameConfig.strikeThreshold = parseFloat(document.getElementById('strikeThresholdInput').value) || 10;
-      gameConfig.strikeBonusMult = parseFloat(document.getElementById('strikeBonusMultInput').value) || 1.3;
-      gameConfig.splitThreshold = parseFloat(document.getElementById('splitThresholdInput').value) ?? 3;
-      gameConfig.splitMultiplier = parseFloat(document.getElementById('splitMultiplierInput').value) ?? 1.2;
-      gameConfig.finalMultiplier = parseFloat(document.getElementById('finalMultiplierInput').value) ?? 1.5;
+      gameConfig.songCount =
+        parseInt(document.getElementById('songCountInput').value) || 5;
 
-      gameConfig.patternB_strikeFinalMult = parseFloat(document.getElementById('patternB_strikeFinalMult').value) ?? 2.0;
-      gameConfig.patternB_spareDiffThreshold = parseFloat(document.getElementById('patternB_spareDiffThreshold').value) ?? 0;
-      gameConfig.patternB_spareFinalMult = parseFloat(document.getElementById('patternB_spareFinalMult').value) ?? 1.5;
+      gameConfig.rulePattern =
+        document.getElementById('rulePatternSelect').value;
 
-      const nameInputs = document.querySelectorAll('#teamNamesContainer input');
-      gameConfig.teamNames = Array.from(nameInputs).map((input, idx) => input.value.trim() || `チーム${idx + 1}`);
+      gameConfig.threshold =
+        parseFloat(document.getElementById('thresholdInput').value) || 90;
+
+      gameConfig.multiplier =
+        parseFloat(document.getElementById('multiplierInput').value) || 1.3;
+
+      gameConfig.strikeThreshold =
+        parseFloat(document.getElementById('strikeThresholdInput').value) || 10;
+
+      gameConfig.strikeBonusMult =
+        parseFloat(document.getElementById('strikeBonusMultInput').value) || 1.3;
+
+      gameConfig.splitThreshold =
+        parseFloat(document.getElementById('splitThresholdInput').value) ?? 3;
+
+      gameConfig.splitMultiplier =
+        parseFloat(document.getElementById('splitMultiplierInput').value) ?? 1.2;
+
+      gameConfig.finalMultiplier =
+        parseFloat(document.getElementById('finalMultiplierInput').value) ?? 1.5;
+
+      gameConfig.patternB_strikeFinalMult =
+        parseFloat(document.getElementById('patternB_strikeFinalMult').value) ?? 2.0;
+
+      gameConfig.patternB_spareDiffThreshold =
+        parseFloat(document.getElementById('patternB_spareDiffThreshold').value) ?? 0;
+
+      gameConfig.patternB_spareFinalMult =
+        parseFloat(document.getElementById('patternB_spareFinalMult').value) ?? 1.5;
+
+      const nameInputs =
+        document.querySelectorAll('#teamNamesContainer input');
+
+      gameConfig.teamNames =
+        Array.from(nameInputs).map(
+          (input, idx) => input.value.trim() || `チーム${idx + 1}`
+        );
 
       updateRuleBadgeText();
 
-      if (!gameState || gameState.length !== gameConfig.teamCount || (gameState[0] && gameState[0].length !== gameConfig.songCount)) {
+      if (
+        !gameState ||
+        gameState.length !== gameConfig.teamCount ||
+        (gameState[0] &&
+          gameState[0].length !== gameConfig.songCount)
+      ) {
         gameState = [];
+
         for (let t = 0; t < gameConfig.teamCount; t++) {
           let songs = [];
+
           for (let s = 0; s < gameConfig.songCount; s++) {
-            songs.push({ raw: null, avg: null });
+            songs.push({
+              raw: null,
+              avg: null
+            });
           }
+
           gameState.push(songs);
         }
       }
@@ -824,6 +911,7 @@
     function backToConfig() {
       document.getElementById('gameScreen').style.display = 'none';
       document.getElementById('configScreen').style.display = 'block';
+
       saveToLocalStorage();
     }
 
@@ -831,61 +919,86 @@
       const theadRow = document.getElementById('scoreTheadRow');
       const tbody = document.getElementById('scoreTbody');
 
-      theadRow.innerHTML = '<th class="team-header">チーム</th>';
+      theadRow.innerHTML =
+        '<th class="team-header">チーム</th>';
+
       for (let i = 1; i <= gameConfig.songCount; i++) {
         const th = document.createElement('th');
+
         th.style.width = '48px';
         th.style.minWidth = '48px';
         th.style.maxWidth = '48px';
+
         th.textContent = i;
         theadRow.appendChild(th);
       }
-      theadRow.innerHTML += '<th style="width: 48px; min-width: 48px; max-width: 48px;">合計</th>';
+
+      theadRow.innerHTML +=
+        '<th style="width: 48px; min-width: 48px; max-width: 48px;">合計</th>';
 
       tbody.innerHTML = '';
+
       for (let t = 0; t < gameConfig.teamCount; t++) {
         const tr = document.createElement('tr');
         const color = TEAM_COLORS[t % TEAM_COLORS.length];
 
         const tdTeam = document.createElement('td');
+
         tdTeam.className = 'team-header';
         tdTeam.style.color = color;
         tdTeam.textContent = gameConfig.teamNames[t];
+
         tr.appendChild(tdTeam);
 
         for (let s = 0; s < gameConfig.songCount; s++) {
           const td = document.createElement('td');
+
           td.className = 'score-cell';
           td.dataset.team = t;
           td.dataset.song = s;
 
           td.addEventListener('click', () => selectCell(t, s));
+
           tr.appendChild(td);
         }
 
         const tdTotal = document.createElement('td');
+
         tdTotal.className = 'total-cell';
         tdTotal.id = `total-team-${t}`;
         tdTotal.textContent = '0';
-        tr.appendChild(tdTotal);
 
+        tr.appendChild(tdTotal);
         tbody.appendChild(tr);
       }
     }
 
     function selectCell(t, s) {
-      selectedCell = { team: t, song: s };
+      selectedCell = {
+        team: t,
+        song: s
+      };
 
       document.querySelectorAll('.score-cell').forEach(cell => {
         cell.classList.remove('selected-cell');
       });
-      const targetCell = document.querySelector(`.score-cell[data-team="${t}"][data-song="${s}"]`);
+
+      const targetCell =
+        document.querySelector(
+          `.score-cell[data-team="${t}"][data-song="${s}"]`
+        );
+
       if (targetCell) {
         targetCell.classList.add('selected-cell');
       }
 
       const data = gameState[t][s];
-      if (data && data.raw !== null && data.avg !== null) {
+
+      if (
+        data &&
+        data.raw !== null &&
+        data.avg !== null
+      ) {
         document.getElementById('rawScore').value = data.raw;
         document.getElementById('avgScore').value = data.avg;
       } else {
@@ -897,8 +1010,11 @@
     }
 
     function setScore() {
-      const rawInput = document.getElementById('rawScore').value;
-      const avgInput = document.getElementById('avgScore').value;
+      const rawInput =
+        document.getElementById('rawScore').value;
+
+      const avgInput =
+        document.getElementById('avgScore').value;
 
       if (rawInput === '' || avgInput === '') {
         alert('素点と平均点を入力をしてください。');
@@ -906,46 +1022,71 @@
       }
 
       const { team, song } = selectedCell;
+
       const raw = parseFloat(rawInput);
       const avg = parseFloat(avgInput);
       const diff = raw - avg;
-      const isFinal = (song === gameConfig.songCount - 1);
+      const isFinal =
+        (song === gameConfig.songCount - 1);
 
       let isStrike = false;
       let isSpare = false;
       let isSplit = false;
 
       if (gameConfig.rulePattern === 'A') {
-        isStrike = (raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
-        isSpare = (raw >= gameConfig.threshold) && !isStrike;
-        isSplit = (raw < gameConfig.threshold) && (diff >= gameConfig.splitThreshold);
+        isStrike =
+          (raw >= gameConfig.threshold) &&
+          (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
+
+        isSpare =
+          (raw >= gameConfig.threshold) &&
+          !isStrike;
+
+        isSplit =
+          (raw < gameConfig.threshold) &&
+          (diff >= gameConfig.splitThreshold);
       } else {
         isStrike = (raw >= 90);
-        isSpare = (raw < 90) && (diff >= gameConfig.patternB_spareDiffThreshold);
+
+        isSpare =
+          (raw < 90) &&
+          (diff >= gameConfig.patternB_spareDiffThreshold);
       }
 
       let roleText = '';
+
       if (isStrike) roleText = '【ストライク】';
       else if (isSpare) roleText = '【スペア】';
       else if (isSplit) roleText = '【スプリット】';
       else if (diff <= 0) roleText = '【G】';
 
-      let msg = `【セット完了】\n${gameConfig.teamNames[team]} (第${song + 1}曲目)\n素点: ${raw} 点 / 平均: ${avg} 点`;
+      let msg =
+        `【セット完了】\n${gameConfig.teamNames[team]} (第${song + 1}曲目)\n素点: ${raw} 点 / 平均: ${avg} 点`;
+
       if (roleText) {
         msg += ` ${roleText}`;
       }
-      if ((isStrike || (gameConfig.rulePattern === 'B' && isSpare)) && !isFinal) {
+
+      if (
+        (isStrike ||
+          (gameConfig.rulePattern === 'B' && isSpare)) &&
+        !isFinal
+      ) {
         msg += `\n※ボーナス（次回分）は次曲入力後に確定します`;
       }
 
       alert(msg);
 
-      gameState[team][song] = { raw: raw, avg: avg };
+      gameState[team][song] = {
+        raw: raw,
+        avg: avg
+      };
 
       recalculateAll();
       saveToLocalStorage();
 
       const next = getNextTurnInfo();
+
       if (next) {
         selectCell(next.teamIndex, next.songIndex);
       } else {
@@ -958,16 +1099,95 @@
       for (let song = 0; song < gameConfig.songCount; song++) {
         for (let t = 0; t < gameConfig.teamCount; t++) {
           const data = gameState[t][song];
+
           if (!data || data.raw === null) {
-            return { teamIndex: t, songIndex: song };
+            return {
+              teamIndex: t,
+              songIndex: song
+            };
           }
         }
       }
+
       return null;
     }
 
+    /*
+     * 残り所要時間を計算して表示
+     *
+     * 1フレーム = 1チームの1曲分
+     * 未入力フレーム数 × 4分
+     */
+    function updateRemainingTime() {
+      const remainingTimeElement =
+        document.getElementById('remainingTime');
+
+      if (!remainingTimeElement) return;
+
+      let totalFrames =
+        gameConfig.teamCount * gameConfig.songCount;
+
+      let enteredFrames = 0;
+
+      for (let t = 0; t < gameConfig.teamCount; t++) {
+        for (let s = 0; s < gameConfig.songCount; s++) {
+          const data =
+            gameState[t] ? gameState[t][s] : null;
+
+          if (
+            data &&
+            data.raw !== null &&
+            data.avg !== null
+          ) {
+            enteredFrames++;
+          }
+        }
+      }
+
+      const remainingFrames =
+        Math.max(0, totalFrames - enteredFrames);
+
+      const remainingMinutes =
+        remainingFrames * MINUTES_PER_FRAME;
+
+      if (remainingFrames === 0) {
+        remainingTimeElement.classList.add('complete');
+
+        remainingTimeElement.innerHTML =
+          '残り所要時間：<strong>入力完了</strong>';
+
+        return;
+      }
+
+      remainingTimeElement.classList.remove('complete');
+
+      let timeText = '';
+
+      const hours =
+        Math.floor(remainingMinutes / 60);
+
+      const minutes =
+        remainingMinutes % 60;
+
+      if (hours > 0) {
+        timeText += `${hours}時間`;
+
+        if (minutes > 0) {
+          timeText += `${minutes}分`;
+        }
+      } else {
+        timeText = `${minutes}分`;
+      }
+
+      remainingTimeElement.innerHTML =
+        `残り所要時間：<strong>約${timeText}</strong> ` +
+        `（未入力 ${remainingFrames}フレーム）`;
+    }
+
     function recalculateAll() {
-      const miniTotalsContainer = document.getElementById('miniTotals');
+      const miniTotalsContainer =
+        document.getElementById('miniTotals');
+
       miniTotalsContainer.innerHTML = '';
       computedTotals = [];
 
@@ -975,11 +1195,17 @@
         let songResults = [];
 
         for (let s = 0; s < gameConfig.songCount; s++) {
-          let data = gameState[t] ? gameState[t][s] : null;
+          let data =
+            gameState[t] ? gameState[t][s] : null;
 
-          if (data && data.raw !== null && data.avg !== null) {
+          if (
+            data &&
+            data.raw !== null &&
+            data.avg !== null
+          ) {
             let diff = data.raw - data.avg;
-            let isFinal = (s === gameConfig.songCount - 1);
+            let isFinal =
+              (s === gameConfig.songCount - 1);
 
             let isStrike = false;
             let isSpare = false;
@@ -987,33 +1213,57 @@
             let basePoint = 0;
 
             if (gameConfig.rulePattern === 'A') {
-              isStrike = (data.raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
-              isSpare = (data.raw >= gameConfig.threshold) && !isStrike;
-              isSplit = (data.raw < gameConfig.threshold) && (diff >= gameConfig.splitThreshold);
+              isStrike =
+                (data.raw >= gameConfig.threshold) &&
+                (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
+
+              isSpare =
+                (data.raw >= gameConfig.threshold) &&
+                !isStrike;
+
+              isSplit =
+                (data.raw < gameConfig.threshold) &&
+                (diff >= gameConfig.splitThreshold);
 
               if (isFinal) {
-                basePoint = data.raw + diff * gameConfig.finalMultiplier;
+                basePoint =
+                  data.raw +
+                  diff * gameConfig.finalMultiplier;
               } else if (data.raw >= gameConfig.threshold) {
-                basePoint = data.raw + diff * gameConfig.multiplier;
+                basePoint =
+                  data.raw +
+                  diff * gameConfig.multiplier;
               } else if (isSplit) {
-                basePoint = data.raw + diff * gameConfig.splitMultiplier;
+                basePoint =
+                  data.raw +
+                  diff * gameConfig.splitMultiplier;
               } else {
-                basePoint = 2 * data.raw - data.avg;
+                basePoint =
+                  2 * data.raw - data.avg;
               }
-            } else { // パターンB
+            } else {
               isStrike = (data.raw >= 90);
-              isSpare = (data.raw < 90) && (diff >= gameConfig.patternB_spareDiffThreshold);
+
+              isSpare =
+                (data.raw < 90) &&
+                (diff >= gameConfig.patternB_spareDiffThreshold);
 
               if (isFinal) {
                 if (isStrike) {
-                  basePoint = data.raw + diff * gameConfig.patternB_strikeFinalMult;
+                  basePoint =
+                    data.raw +
+                    diff * gameConfig.patternB_strikeFinalMult;
                 } else if (isSpare) {
-                  basePoint = data.raw + diff * gameConfig.patternB_spareFinalMult;
+                  basePoint =
+                    data.raw +
+                    diff * gameConfig.patternB_spareFinalMult;
                 } else {
-                  basePoint = data.raw + diff;
+                  basePoint =
+                    data.raw + diff;
                 }
               } else {
-                basePoint = data.raw + diff;
+                basePoint =
+                  data.raw + diff;
               }
             }
 
@@ -1049,50 +1299,88 @@
 
         for (let s = 0; s < gameConfig.songCount; s++) {
           let res = songResults[s];
+
           let displayTL = "";
           let displayTR = "";
           let displayB = "";
 
           if (res.isEntered) {
             displayTL = Math.round(res.raw);
+
             let bonusPt = null;
 
             if (gameConfig.rulePattern === 'A') {
               if (res.isStrike && !res.isFinal) {
-                if (s + 1 < gameConfig.songCount && songResults[s + 1].isEntered) {
+                if (
+                  s + 1 < gameConfig.songCount &&
+                  songResults[s + 1].isEntered
+                ) {
                   let nextRes = songResults[s + 1];
-                  let bonus = nextRes.diff * gameConfig.multiplier;
-                  if (nextRes.raw >= gameConfig.threshold) {
-                    bonus *= gameConfig.strikeBonusMult;
+
+                  let bonus =
+                    nextRes.diff *
+                    gameConfig.multiplier;
+
+                  if (
+                    nextRes.raw >=
+                    gameConfig.threshold
+                  ) {
+                    bonus *=
+                      gameConfig.strikeBonusMult;
                   }
-                  bonusPt = Math.round((res.basePoint - res.raw) + bonus);
-                } else {
-                  bonusPt = null;
+
+                  bonusPt =
+                    Math.round(
+                      (res.basePoint - res.raw) +
+                      bonus
+                    );
                 }
               } else {
-                bonusPt = Math.round(res.basePoint - res.raw);
+                bonusPt =
+                  Math.round(
+                    res.basePoint - res.raw
+                  );
               }
-            } else { // パターンB
+            } else {
               if (res.isStrike && !res.isFinal) {
-                if (s + 1 < gameConfig.songCount && songResults[s + 1].isEntered) {
-                  let nextRes = songResults[s + 1];
-                  bonusPt = Math.round(res.diff + (nextRes.diff * 2));
-                } else {
-                  bonusPt = null;
+                if (
+                  s + 1 < gameConfig.songCount &&
+                  songResults[s + 1].isEntered
+                ) {
+                  let nextRes =
+                    songResults[s + 1];
+
+                  bonusPt =
+                    Math.round(
+                      res.diff +
+                      (nextRes.diff * 2)
+                    );
                 }
-              } else if (res.isSpare && !res.isFinal) {
-                if (s + 1 < gameConfig.songCount && songResults[s + 1].isEntered) {
-                  let nextRes = songResults[s + 1];
-                  bonusPt = Math.round(res.diff + nextRes.diff);
-                } else {
-                  bonusPt = null;
+              } else if (
+                res.isSpare &&
+                !res.isFinal
+              ) {
+                if (
+                  s + 1 < gameConfig.songCount &&
+                  songResults[s + 1].isEntered
+                ) {
+                  let nextRes =
+                    songResults[s + 1];
+
+                  bonusPt =
+                    Math.round(
+                      res.diff +
+                      nextRes.diff
+                    );
                 }
               } else {
-                bonusPt = Math.round(res.basePoint - res.raw);
+                bonusPt =
+                  Math.round(
+                    res.basePoint - res.raw
+                  );
               }
             }
 
-            // 右上マスの表示制御 (SVG描画 / G / 通常計算数値)
             if (res.isStrike) {
               displayTR = STRIKE_SVG;
             } else if (res.isSpare) {
@@ -1100,12 +1388,17 @@
             } else if (res.diff <= 0) {
               displayTR = "G";
             } else {
-              displayTR = (bonusPt !== null) ? bonusPt : "";
+              displayTR =
+                (bonusPt !== null)
+                  ? bonusPt
+                  : "";
             }
 
             if (bonusPt !== null) {
               if (s === 0 || prevCalculated) {
-                let frameTotal = Math.round(res.raw) + bonusPt;
+                let frameTotal =
+                  Math.round(res.raw) + bonusPt;
+
                 cumulative += frameTotal;
                 displayB = cumulative;
                 totalScore = cumulative;
@@ -1120,7 +1413,11 @@
             }
           }
 
-          const cell = document.querySelector(`.score-cell[data-team="${t}"][data-song="${s}"]`);
+          const cell =
+            document.querySelector(
+              `.score-cell[data-team="${t}"][data-song="${s}"]`
+            );
+
           if (cell) {
             cell.innerHTML = `
               <div class="bowling-cell">
@@ -1134,21 +1431,48 @@
           }
         }
 
-        let roundedTotal = Math.round(totalScore);
-        computedTotals[t] = roundedTotal;
+        let roundedTotal =
+          Math.round(totalScore);
 
-        const totalCell = document.getElementById(`total-team-${t}`);
+        computedTotals[t] =
+          roundedTotal;
+
+        const totalCell =
+          document.getElementById(
+            `total-team-${t}`
+          );
+
         if (totalCell) {
-          totalCell.textContent = roundedTotal;
+          totalCell.textContent =
+            roundedTotal;
         }
 
-        const color = TEAM_COLORS[t % TEAM_COLORS.length];
-        const badge = document.createElement('div');
-        badge.className = 'mini-total-badge';
-        badge.style.backgroundColor = color;
-        badge.textContent = `${gameConfig.teamNames[t]}: ${roundedTotal} pt`;
-        miniTotalsContainer.appendChild(badge);
+        const color =
+          TEAM_COLORS[
+            t % TEAM_COLORS.length
+          ];
+
+        const badge =
+          document.createElement('div');
+
+        badge.className =
+          'mini-total-badge';
+
+        badge.style.backgroundColor =
+          color;
+
+        badge.textContent =
+          `${gameConfig.teamNames[t]}: ${roundedTotal} pt`;
+
+        miniTotalsContainer.appendChild(
+          badge
+        );
       }
+
+      /*
+       * スコア再計算の最後に残り時間も更新
+       */
+      updateRemainingTime();
     }
 
     // 最終結果モーダル表示
@@ -1157,212 +1481,433 @@
       let totalSum = 0;
 
       for (let t = 0; t < gameConfig.teamCount; t++) {
-        let score = computedTotals[t] || 0;
+        let score =
+          computedTotals[t] || 0;
+
         results.push({
           teamIndex: t,
           name: gameConfig.teamNames[t],
           score: score
         });
+
         totalSum += score;
       }
 
-      results.sort((a, b) => b.score - a.score);
+      results.sort(
+        (a, b) => b.score - a.score
+      );
 
       let currentRank = 1;
+
       results.forEach((res, i) => {
-        if (i > 0 && res.score < results[i - 1].score) {
+        if (
+          i > 0 &&
+          res.score < results[i - 1].score
+        ) {
           currentRank = i + 1;
         }
+
         res.rank = currentRank;
       });
 
-      const teamCount = gameConfig.teamCount;
-      const topScore = results[0].score;
-      const averageScore = totalSum / teamCount;
+      const teamCount =
+        gameConfig.teamCount;
 
-      let msg = "🎉 全曲の入力が完了しました！\n\n";
+      const topScore =
+        results[0].score;
+
+      const averageScore =
+        totalSum / teamCount;
+
+      let msg =
+        "🎉 全曲の入力が完了しました！\n\n";
 
       if (teamCount === 2) {
-        const diff = results[0].score - results[1].score;
+        const diff =
+          results[0].score -
+          results[1].score;
+
         msg += "【順位結果】\n";
+
         results.forEach(res => {
-          let rankLabel = res.rank === 1 ? "🥇 1位" : "🥈 2位";
+          let rankLabel =
+            res.rank === 1
+              ? "🥇 1位"
+              : "🥈 2位";
+
           if (res.rank === 1) {
-            msg += `${rankLabel}: ${res.name} (${res.score} pt) 👑 WINNER!\n`;
+            msg +=
+              `${rankLabel}: ${res.name} (${res.score} pt) 👑 WINNER!\n`;
           } else {
-            msg += `${rankLabel}: ${res.name} (${res.score} pt)\n`;
+            msg +=
+              `${rankLabel}: ${res.name} (${res.score} pt)\n`;
           }
         });
+
         if (diff === 0) {
-          msg += "\n（引き分けです！）";
+          msg +=
+            "\n（引き分けです！）";
         } else {
-          msg += `\n（勝者との点差: ${diff} pt）`;
+          msg +=
+            `\n（勝者との点差: ${diff} pt）`;
         }
       } else {
-        msg += `【全チーム合計平均 (基準点): ${averageScore.toFixed(1)} pt】\n\n`;
-        
+        msg +=
+          `【全チーム合計平均 (基準点): ${averageScore.toFixed(1)} pt】\n\n`;
+
         results.forEach(res => {
           let medal = "";
+
           if (res.rank === 1) medal = "🥇 ";
           else if (res.rank === 2) medal = "🥈 ";
           else if (res.rank === 3) medal = "🥉 ";
 
-          let rankStr = `${medal}${res.rank}位`;
+          let rankStr =
+            `${medal}${res.rank}位`;
 
-          let diffFromAvg = res.score - averageScore;
-          let avgDiffStr = diffFromAvg > 0 ? `+${diffFromAvg.toFixed(1)}` : diffFromAvg.toFixed(1);
-          if (diffFromAvg === 0) avgDiffStr = "±0.0";
+          let diffFromAvg =
+            res.score - averageScore;
 
-          let diffFromTop = res.score - topScore;
+          let avgDiffStr =
+            diffFromAvg > 0
+              ? `+${diffFromAvg.toFixed(1)}`
+              : diffFromAvg.toFixed(1);
+
+          if (diffFromAvg === 0) {
+            avgDiffStr = "±0.0";
+          }
+
+          let diffFromTop =
+            res.score - topScore;
 
           if (res.rank === 1) {
-            msg += `${rankStr}: ${res.name} (${res.score} pt)\n  └ 基準点差: ${avgDiffStr} pt\n`;
+            msg +=
+              `${rankStr}: ${res.name} (${res.score} pt)\n` +
+              `  └ 基準点差: ${avgDiffStr} pt\n`;
           } else {
-            msg += `${rankStr}: ${res.name} (${res.score} pt)\n  └ 基準点差: ${avgDiffStr} pt / トップ差: ${diffFromTop} pt\n`;
+            msg +=
+              `${rankStr}: ${res.name} (${res.score} pt)\n` +
+              `  └ 基準点差: ${avgDiffStr} pt / トップ差: ${diffFromTop} pt\n`;
           }
         });
       }
 
-      document.getElementById('resultTextContainer').textContent = msg;
-      document.getElementById('resultModal').style.display = 'flex';
+      document.getElementById(
+        'resultTextContainer'
+      ).textContent = msg;
+
+      document.getElementById(
+        'resultModal'
+      ).style.display = 'flex';
     }
 
     function closeResultModal() {
-      document.getElementById('resultModal').style.display = 'none';
+      document.getElementById(
+        'resultModal'
+      ).style.display = 'none';
     }
 
     // スコア表＆内訳表をまとめたPDFの出力処理
     function exportToPDF() {
-      const btn = document.getElementById('pdfExportBtn');
-      if (btn) btn.textContent = '⏳ PDF生成中...';
+      const btn =
+        document.getElementById(
+          'pdfExportBtn'
+        );
 
-      const element = document.createElement('div');
-      element.style.padding = '8px 12px';
-      element.style.fontFamily = '"Helvetica Neue", Arial, sans-serif';
+      if (btn) {
+        btn.textContent =
+          '⏳ PDF生成中...';
+      }
+
+      const element =
+        document.createElement('div');
+
+      element.style.padding =
+        '8px 12px';
+
+      element.style.fontFamily =
+        '"Helvetica Neue", Arial, sans-serif';
+
       element.style.color = '#333';
-      element.style.backgroundColor = '#ffffff';
+      element.style.backgroundColor =
+        '#ffffff';
+
       element.style.width = '700px';
-      element.style.boxSizing = 'border-box';
+      element.style.boxSizing =
+        'border-box';
 
       const now = new Date();
-      const dateStr = now.toLocaleDateString('ja-JP') + ' ' + now.toLocaleTimeString('ja-JP', {hour: '2-digit', minute:'2-digit'});
 
-      let html = `<h1 style="text-align:center; font-size: 15px; margin-top: 0; margin-bottom: 2px; color: #2c3e50;">ボウリングカラオケ 最終スコア結果</h1>`;
-      html += `<p style="text-align:right; font-size: 8px; color: #666; margin-bottom: 6px;">出力日時: ${dateStr}</p>`;
+      const dateStr =
+        now.toLocaleDateString('ja-JP') +
+        ' ' +
+        now.toLocaleTimeString(
+          'ja-JP',
+          {
+            hour: '2-digit',
+            minute: '2-digit'
+          }
+        );
 
-      // 1. 順位結果サマリー
-      const resultText = document.getElementById('resultTextContainer').innerText;
-      html += `<div style="background: #f0f7ff; border: 1px solid #b3d7ff; padding: 6px 8px; border-radius: 4px; margin-bottom: 8px;">
-        <h2 style="font-size: 11px; margin-top: 0; margin-bottom: 4px; color: #2c3e50;">【最終順位結果】</h2>
-        <pre style="font-size: 9px; font-family: inherit; margin: 0; white-space: pre-wrap; line-height: 1.3;">${resultText}</pre>
-      </div>`;
+      let html =
+        `<h1 style="text-align:center; font-size:15px; margin-top:0; margin-bottom:2px; color:#2c3e50;">ボウリングカラオケ 最終スコア結果</h1>`;
 
-      // 2. 全体スコア表
-      html += `<h2 style="font-size: 11px; margin-top: 0; margin-bottom: 4px; border-bottom: 2px solid #27ae60; padding-bottom: 1px; color: #27ae60;">■ 全体スコア表</h2>`;
-      
-      let scoreTableHtml = `<table style="width:auto; border-collapse:collapse; text-align:center; font-size:9px; margin-bottom:8px; table-layout:fixed;">`;
-      scoreTableHtml += `<thead><tr style="background:#eee;">
-        <th style="border:1px solid #333; padding:3px; width:75px;">チーム</th>`;
-      for (let i = 1; i <= gameConfig.songCount; i++) {
-        scoreTableHtml += `<th style="border:1px solid #333; padding:3px; width:48px;">${i}</th>`;
+      html +=
+        `<p style="text-align:right; font-size:8px; color:#666; margin-bottom:6px;">出力日時: ${dateStr}</p>`;
+
+      const resultText =
+        document.getElementById(
+          'resultTextContainer'
+        ).innerText;
+
+      html += `
+        <div style="background:#f0f7ff; border:1px solid #b3d7ff; padding:6px 8px; border-radius:4px; margin-bottom:8px;">
+          <h2 style="font-size:11px; margin-top:0; margin-bottom:4px; color:#2c3e50;">【最終順位結果】</h2>
+          <pre style="font-size:9px; font-family:inherit; margin:0; white-space:pre-wrap; line-height:1.3;">${resultText}</pre>
+        </div>
+      `;
+
+      html +=
+        `<h2 style="font-size:11px; margin-top:0; margin-bottom:4px; border-bottom:2px solid #27ae60; padding-bottom:1px; color:#27ae60;">■ 全体スコア表</h2>`;
+
+      let scoreTableHtml =
+        `<table style="width:auto; border-collapse:collapse; text-align:center; font-size:9px; margin-bottom:8px; table-layout:fixed;">`;
+
+      scoreTableHtml += `
+        <thead>
+          <tr style="background:#eee;">
+            <th style="border:1px solid #333; padding:3px; width:75px;">チーム</th>
+      `;
+
+      for (
+        let i = 1;
+        i <= gameConfig.songCount;
+        i++
+      ) {
+        scoreTableHtml +=
+          `<th style="border:1px solid #333; padding:3px; width:48px;">${i}</th>`;
       }
-      scoreTableHtml += `<th style="border:1px solid #333; padding:3px; width:48px; background:#e0e0e0;">合計</th></tr></thead><tbody>`;
 
-      for (let t = 0; t < gameConfig.teamCount; t++) {
-        const color = TEAM_COLORS[t % TEAM_COLORS.length];
+      scoreTableHtml +=
+        `<th style="border:1px solid #333; padding:3px; width:48px; background:#e0e0e0;">合計</th></tr></thead><tbody>`;
+
+      for (
+        let t = 0;
+        t < gameConfig.teamCount;
+        t++
+      ) {
+        const color =
+          TEAM_COLORS[
+            t % TEAM_COLORS.length
+          ];
+
         scoreTableHtml += `<tr>`;
-        scoreTableHtml += `<td style="border:1px solid #333; padding:3px; font-weight:bold; color:${color}; width:75px;">${gameConfig.teamNames[t]}</td>`;
-        
-        for (let s = 0; s < gameConfig.songCount; s++) {
-          const cell = document.querySelector(`.score-cell[data-team="${t}"][data-song="${s}"]`);
-          const text = cell ? cell.innerHTML : '';
-          scoreTableHtml += `<td style="border:1px solid #333; padding:0; width:48px; height:36px;">${text}</td>`;
+
+        scoreTableHtml +=
+          `<td style="border:1px solid #333; padding:3px; font-weight:bold; color:${color}; width:75px;">${gameConfig.teamNames[t]}</td>`;
+
+        for (
+          let s = 0;
+          s < gameConfig.songCount;
+          s++
+        ) {
+          const cell =
+            document.querySelector(
+              `.score-cell[data-team="${t}"][data-song="${s}"]`
+            );
+
+          const text =
+            cell ? cell.innerHTML : '';
+
+          scoreTableHtml +=
+            `<td style="border:1px solid #333; padding:0; width:48px; height:36px;">${text}</td>`;
         }
-        scoreTableHtml += `<td style="border:1px solid #333; padding:3px; font-weight:bold; background:#f9f9f9; color:#d35400; width:48px;">${computedTotals[t] || 0}</td>`;
+
+        scoreTableHtml +=
+          `<td style="border:1px solid #333; padding:3px; font-weight:bold; background:#f9f9f9; color:#d35400; width:48px;">${computedTotals[t] || 0}</td>`;
+
         scoreTableHtml += `</tr>`;
       }
-      scoreTableHtml += `</tbody></table>`;
+
+      scoreTableHtml +=
+        `</tbody></table>`;
+
       html += scoreTableHtml;
 
-      // 3. 詳細内訳表
-      html += `<h2 style="font-size: 11px; margin-top: 0; margin-bottom: 4px; border-bottom: 2px solid #3498db; padding-bottom: 1px; color: #3498db;">■ スコア詳細・内訳</h2>`;
-      html += generateDetailHTML(true);
+      html +=
+        `<h2 style="font-size:11px; margin-top:0; margin-bottom:4px; border-bottom:2px solid #3498db; padding-bottom:1px; color:#3498db;">■ スコア詳細・内訳</h2>`;
+
+      html +=
+        generateDetailHTML(true);
 
       element.innerHTML = html;
 
       const opt = {
-        margin:       [5, 5, 5, 5],
-        filename:     `bowling_score_${new Date().toISOString().slice(0,10)}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        margin: [5, 5, 5, 5],
+        filename:
+          `bowling_score_${new Date().toISOString().slice(0, 10)}.pdf`,
+        image: {
+          type: 'jpeg',
+          quality: 0.98
+        },
+        html2canvas: {
+          scale: 2,
+          useCORS: true
+        },
+        jsPDF: {
+          unit: 'mm',
+          format: 'a4',
+          orientation: 'portrait'
+        }
       };
 
-      html2pdf().set(opt).from(element).save().then(() => {
-        if (btn) btn.textContent = '📄 スコア表＆内訳をPDF出力';
-      }).catch(err => {
-        console.error('PDF出力エラー:', err);
-        if (btn) btn.textContent = '📄 スコア表＆内訳をPDF出力';
-      });
+      html2pdf()
+        .set(opt)
+        .from(element)
+        .save()
+        .then(() => {
+          if (btn) {
+            btn.textContent =
+              '📄 スコア表＆内訳をPDF出力';
+          }
+        })
+        .catch(err => {
+          console.error(
+            'PDF出力エラー:',
+            err
+          );
+
+          if (btn) {
+            btn.textContent =
+              '📄 スコア表＆内訳をPDF出力';
+          }
+        });
     }
 
     function updateTurnDisplay() {
-      const { team, song } = selectedCell;
-      const teamText = document.getElementById('currentTeamText');
-      const roundText = document.getElementById('currentRoundText');
-      const setBtn = document.getElementById('setBtn');
+      const { team, song } =
+        selectedCell;
 
-      const rows = document.querySelectorAll('#scoreTbody tr');
-      const targetRow = rows[team];
+      const teamText =
+        document.getElementById(
+          'currentTeamText'
+        );
+
+      const roundText =
+        document.getElementById(
+          'currentRoundText'
+        );
+
+      const setBtn =
+        document.getElementById(
+          'setBtn'
+        );
+
+      const rows =
+        document.querySelectorAll(
+          '#scoreTbody tr'
+        );
+
+      const targetRow =
+        rows[team];
+
       if (targetRow) {
-        const teamNameHeader = targetRow.querySelector('.team-header');
-        teamText.textContent = teamNameHeader.textContent;
-        teamText.style.color = teamNameHeader.style.color;
-        roundText.textContent = song + 1;
+        const teamNameHeader =
+          targetRow.querySelector(
+            '.team-header'
+          );
+
+        teamText.textContent =
+          teamNameHeader.textContent;
+
+        teamText.style.color =
+          teamNameHeader.style.color;
+
+        roundText.textContent =
+          song + 1;
       }
 
-      if (gameState[team] && gameState[team][song] && gameState[team][song].raw !== null) {
-        setBtn.textContent = '更新';
+      if (
+        gameState[team] &&
+        gameState[team][song] &&
+        gameState[team][song].raw !== null
+      ) {
+        setBtn.textContent =
+          '更新';
       } else {
-        setBtn.textContent = 'セット';
+        setBtn.textContent =
+          'セット';
       }
     }
 
     // 内訳HTML生成
-    function generateDetailHTML(isPdf = false) {
+    function generateDetailHTML(
+      isPdf = false
+    ) {
       let html = '';
-      const cellPadding = isPdf ? '2px 3px' : '4px';
-      const fontSize = isPdf ? '9px' : '11px';
-      const headerFontSize = isPdf ? '9px' : '10px';
-      const tableMargin = isPdf ? '6px' : '12px';
 
-      for (let t = 0; t < gameConfig.teamCount; t++) {
-        const color = TEAM_COLORS[t % TEAM_COLORS.length];
-        
+      const cellPadding =
+        isPdf ? '2px 3px' : '4px';
+
+      const fontSize =
+        isPdf ? '9px' : '11px';
+
+      const headerFontSize =
+        isPdf ? '9px' : '10px';
+
+      const tableMargin =
+        isPdf ? '6px' : '12px';
+
+      for (
+        let t = 0;
+        t < gameConfig.teamCount;
+        t++
+      ) {
+        const color =
+          TEAM_COLORS[
+            t % TEAM_COLORS.length
+          ];
+
         let totalRaw = 0;
         let totalAvg = 0;
         let enteredCount = 0;
         let totalFinalPoint = 0;
 
-        for (let s = 0; s < gameConfig.songCount; s++) {
-          const data = gameState[t][s];
-          if (data && data.raw !== null && data.avg !== null) {
+        for (
+          let s = 0;
+          s < gameConfig.songCount;
+          s++
+        ) {
+          const data =
+            gameState[t][s];
+
+          if (
+            data &&
+            data.raw !== null &&
+            data.avg !== null
+          ) {
             totalRaw += data.raw;
             totalAvg += data.avg;
             enteredCount++;
           }
         }
 
-        const rawAvg = enteredCount > 0 ? (totalRaw / enteredCount) : 0;
-        const avgSummaryText = enteredCount > 0 
-          ? `素点合計: ${totalRaw.toFixed(1)}点 / 素点平均: ${rawAvg.toFixed(2)}点` 
-          : `未入力`;
+        const rawAvg =
+          enteredCount > 0
+            ? totalRaw / enteredCount
+            : 0;
+
+        const avgSummaryText =
+          enteredCount > 0
+            ? `素点合計: ${totalRaw.toFixed(1)}点 / 素点平均: ${rawAvg.toFixed(2)}点`
+            : `未入力`;
 
         html += `
-          <div class="detail-team-title" style="font-size: ${isPdf ? '11px' : '14px'}; margin-top: ${isPdf ? '4px' : '10px'}; margin-bottom: 2px;">
-            <span style="color: ${color};">■ ${gameConfig.teamNames[t]}</span>
-            <span class="detail-team-summary" style="font-size: ${isPdf ? '9px' : '11px'}; padding: 1px 4px;">${avgSummaryText}</span>
+          <div class="detail-team-title" style="font-size:${isPdf ? '11px' : '14px'}; margin-top:${isPdf ? '4px' : '10px'}; margin-bottom:2px;">
+            <span style="color:${color};">■ ${gameConfig.teamNames[t]}</span>
+            <span class="detail-team-summary" style="font-size:${isPdf ? '9px' : '11px'}; padding:1px 4px;">${avgSummaryText}</span>
           </div>
+
           <table class="detail-table" style="width:100%; border-collapse:collapse; margin-bottom:${tableMargin}; text-align:center; font-size:${fontSize};">
             <thead>
               <tr style="background:#f8f9fa;">
@@ -1379,84 +1924,184 @@
             <tbody>
         `;
 
-        for (let s = 0; s < gameConfig.songCount; s++) {
-          const data = gameState[t][s];
-          if (data && data.raw !== null && data.avg !== null) {
-            let diff = data.raw - data.avg;
-            let isFinal = (s === gameConfig.songCount - 1);
+        for (
+          let s = 0;
+          s < gameConfig.songCount;
+          s++
+        ) {
+          const data =
+            gameState[t][s];
+
+          if (
+            data &&
+            data.raw !== null &&
+            data.avg !== null
+          ) {
+            let diff =
+              data.raw - data.avg;
+
+            let isFinal =
+              (s === gameConfig.songCount - 1);
 
             let isStrike = false;
             let isSpare = false;
             let isSplit = false;
 
-            if (gameConfig.rulePattern === 'A') {
-              isStrike = (data.raw >= gameConfig.threshold) && (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
-              isSpare = (data.raw >= gameConfig.threshold) && !isStrike;
-              isSplit = (data.raw < gameConfig.threshold) && (diff >= gameConfig.splitThreshold);
-            } else { // パターンB
-              isStrike = (data.raw >= 90);
-              isSpare = (data.raw < 90) && (diff >= gameConfig.patternB_spareDiffThreshold);
+            if (
+              gameConfig.rulePattern === 'A'
+            ) {
+              isStrike =
+                (data.raw >= gameConfig.threshold) &&
+                (diff * gameConfig.multiplier >= gameConfig.strikeThreshold);
+
+              isSpare =
+                (data.raw >= gameConfig.threshold) &&
+                !isStrike;
+
+              isSplit =
+                (data.raw < gameConfig.threshold) &&
+                (diff >= gameConfig.splitThreshold);
+            } else {
+              isStrike =
+                (data.raw >= 90);
+
+              isSpare =
+                (data.raw < 90) &&
+                (diff >= gameConfig.patternB_spareDiffThreshold);
             }
 
-            // この曲の最終計算ポイント (finalPoint)
             let finalPoint = 0;
             let isPending = false;
 
-            if (gameConfig.rulePattern === 'A') {
+            if (
+              gameConfig.rulePattern === 'A'
+            ) {
               if (isFinal) {
-                finalPoint = data.raw + diff * gameConfig.finalMultiplier;
+                finalPoint =
+                  data.raw +
+                  diff *
+                  gameConfig.finalMultiplier;
               } else if (isStrike) {
-                if (s + 1 < gameConfig.songCount && gameState[t][s + 1] && gameState[t][s + 1].raw !== null) {
-                  let nextData = gameState[t][s + 1];
-                  let nextDiff = nextData.raw - nextData.avg;
-                  let bonusAdd = nextDiff * gameConfig.multiplier;
-                  if (nextData.raw >= gameConfig.threshold) {
-                    bonusAdd *= gameConfig.strikeBonusMult;
+                if (
+                  s + 1 <
+                    gameConfig.songCount &&
+                  gameState[t][s + 1] &&
+                  gameState[t][s + 1].raw !== null
+                ) {
+                  let nextData =
+                    gameState[t][s + 1];
+
+                  let nextDiff =
+                    nextData.raw -
+                    nextData.avg;
+
+                  let bonusAdd =
+                    nextDiff *
+                    gameConfig.multiplier;
+
+                  if (
+                    nextData.raw >=
+                    gameConfig.threshold
+                  ) {
+                    bonusAdd *=
+                      gameConfig.strikeBonusMult;
                   }
-                  finalPoint = data.raw + diff * gameConfig.multiplier + bonusAdd;
+
+                  finalPoint =
+                    data.raw +
+                    diff *
+                    gameConfig.multiplier +
+                    bonusAdd;
                 } else {
                   isPending = true;
                 }
-              } else if (data.raw >= gameConfig.threshold) {
-                finalPoint = data.raw + diff * gameConfig.multiplier;
+              } else if (
+                data.raw >=
+                gameConfig.threshold
+              ) {
+                finalPoint =
+                  data.raw +
+                  diff *
+                  gameConfig.multiplier;
               } else if (isSplit) {
-                finalPoint = data.raw + diff * gameConfig.splitMultiplier;
+                finalPoint =
+                  data.raw +
+                  diff *
+                  gameConfig.splitMultiplier;
               } else {
-                finalPoint = 2 * data.raw - data.avg;
+                finalPoint =
+                  2 * data.raw -
+                  data.avg;
               }
-            } else { // パターンB
+            } else {
               if (isFinal) {
                 if (isStrike) {
-                  finalPoint = data.raw + diff * gameConfig.patternB_strikeFinalMult;
+                  finalPoint =
+                    data.raw +
+                    diff *
+                    gameConfig.patternB_strikeFinalMult;
                 } else if (isSpare) {
-                  finalPoint = data.raw + diff * gameConfig.patternB_spareFinalMult;
+                  finalPoint =
+                    data.raw +
+                    diff *
+                    gameConfig.patternB_spareFinalMult;
                 } else {
-                  finalPoint = data.raw + diff;
+                  finalPoint =
+                    data.raw + diff;
                 }
               } else if (isStrike) {
-                if (s + 1 < gameConfig.songCount && gameState[t][s + 1] && gameState[t][s + 1].raw !== null) {
-                  let nextData = gameState[t][s + 1];
-                  let nextDiff = nextData.raw - nextData.avg;
-                  finalPoint = data.raw + diff + nextDiff * 2;
+                if (
+                  s + 1 <
+                    gameConfig.songCount &&
+                  gameState[t][s + 1] &&
+                  gameState[t][s + 1].raw !== null
+                ) {
+                  let nextData =
+                    gameState[t][s + 1];
+
+                  let nextDiff =
+                    nextData.raw -
+                    nextData.avg;
+
+                  finalPoint =
+                    data.raw +
+                    diff +
+                    nextDiff * 2;
                 } else {
                   isPending = true;
                 }
               } else if (isSpare) {
-                if (s + 1 < gameConfig.songCount && gameState[t][s + 1] && gameState[t][s + 1].raw !== null) {
-                  let nextData = gameState[t][s + 1];
-                  let nextDiff = nextData.raw - nextData.avg;
-                  finalPoint = data.raw + diff + nextDiff;
+                if (
+                  s + 1 <
+                    gameConfig.songCount &&
+                  gameState[t][s + 1] &&
+                  gameState[t][s + 1].raw !== null
+                ) {
+                  let nextData =
+                    gameState[t][s + 1];
+
+                  let nextDiff =
+                    nextData.raw -
+                    nextData.avg;
+
+                  finalPoint =
+                    data.raw +
+                    diff +
+                    nextDiff;
                 } else {
                   isPending = true;
                 }
               } else {
-                finalPoint = data.raw + diff;
+                finalPoint =
+                  data.raw + diff;
               }
             }
 
-            // 基本ptは「2×素点 - 平均」（＝ 素点 ＋ 平均差）
-            const standardBase = 2 * data.raw - data.avg;
-            const basePtVal = Math.round(standardBase);
+            const standardBase =
+              2 * data.raw - data.avg;
+
+            const basePtVal =
+              Math.round(standardBase);
 
             let bonusText = "-";
             let subtotalText = "-";
@@ -1465,27 +2110,44 @@
               bonusText = "(次曲待ち)";
               subtotalText = "(未確定)";
             } else {
-              let roundedFinal = Math.round(finalPoint);
-              // 「2×素点-平均」からの増減分をすべてボーナスに計上
-              let bonusVal = roundedFinal - basePtVal;
+              let roundedFinal =
+                Math.round(finalPoint);
+
+              let bonusVal =
+                roundedFinal -
+                basePtVal;
+
               if (bonusVal > 0) {
-                bonusText = `+${bonusVal} pt`;
+                bonusText =
+                  `+${bonusVal} pt`;
               } else if (bonusVal < 0) {
-                bonusText = `${bonusVal} pt`;
+                bonusText =
+                  `${bonusVal} pt`;
               } else {
-                bonusText = `-`;
+                bonusText = "-";
               }
-              subtotalText = `<b>${roundedFinal} pt</b>`;
-              totalFinalPoint += roundedFinal;
+
+              subtotalText =
+                `<b>${roundedFinal} pt</b>`;
+
+              totalFinalPoint +=
+                roundedFinal;
             }
 
             let judgeText = "通常";
-            if (isStrike) judgeText = "ストライク";
-            else if (isSpare) judgeText = "スペア";
-            else if (isSplit) judgeText = "スプリット";
-            else if (diff <= 0) judgeText = "G";
 
-            if (isFinal) judgeText += " (最終)";
+            if (isStrike)
+              judgeText = "ストライク";
+            else if (isSpare)
+              judgeText = "スペア";
+            else if (isSplit)
+              judgeText = "スプリット";
+            else if (diff <= 0)
+              judgeText = "G";
+
+            if (isFinal) {
+              judgeText += " (最終)";
+            }
 
             html += `
               <tr>
@@ -1503,20 +2165,25 @@
             html += `
               <tr>
                 <td style="border:1px solid #ccc; padding:${cellPadding};">第${s + 1}曲</td>
-                <td colspan="7" style="border:1px solid #ccc; padding:${cellPadding}; color: #999;">- 未入力 -</td>
+                <td colspan="7" style="border:1px solid #ccc; padding:${cellPadding}; color:#999;">- 未入力 -</td>
               </tr>
             `;
           }
         }
 
         if (enteredCount > 0) {
-          const diffSum = totalRaw - totalAvg;
-          const diffAvg = diffSum / enteredCount;
-          const avgAvg = totalAvg / enteredCount;
+          const diffSum =
+            totalRaw - totalAvg;
+
+          const diffAvg =
+            diffSum / enteredCount;
+
+          const avgAvg =
+            totalAvg / enteredCount;
 
           html += `
             <tfoot>
-              <tr style="background-color: #f0f4f8;">
+              <tr style="background-color:#f0f4f8;">
                 <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">合計</td>
                 <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">${totalRaw.toFixed(1)}点</td>
                 <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">${totalAvg.toFixed(1)}点</td>
@@ -1526,7 +2193,8 @@
                 <td style="border:1px solid #ccc; padding:${cellPadding};">-</td>
                 <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">${totalFinalPoint}pt</td>
               </tr>
-              <tr style="background-color: #e8f8f8;">
+
+              <tr style="background-color:#e8f8f8;">
                 <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">平均</td>
                 <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">${rawAvg.toFixed(2)}点</td>
                 <td style="border:1px solid #ccc; padding:${cellPadding}; font-weight:bold;">${avgAvg.toFixed(2)}点</td>
@@ -1539,28 +2207,59 @@
             </tfoot>
           `;
         }
+
         html += `</table>`;
       }
+
       return html;
     }
 
     function openDetailModal() {
-      const container = document.getElementById('modalBodyContainer');
-      container.innerHTML = generateDetailHTML(false);
-      document.getElementById('detailModal').style.display = 'flex';
+      const container =
+        document.getElementById(
+          'modalBodyContainer'
+        );
+
+      container.innerHTML =
+        generateDetailHTML(false);
+
+      document.getElementById(
+        'detailModal'
+      ).style.display = 'flex';
     }
 
     function closeDetailModal() {
-      document.getElementById('detailModal').style.display = 'none';
+      document.getElementById(
+        'detailModal'
+      ).style.display = 'none';
     }
 
     function resetGame() {
-      if (!confirm('スコア表の数字をクリアしますか？')) return;
-      for (let t = 0; t < gameConfig.teamCount; t++) {
-        for (let s = 0; s < gameConfig.songCount; s++) {
-          gameState[t][s] = { raw: null, avg: null };
+      if (
+        !confirm(
+          'スコア表の数字をクリアしますか？'
+        )
+      ) {
+        return;
+      }
+
+      for (
+        let t = 0;
+        t < gameConfig.teamCount;
+        t++
+      ) {
+        for (
+          let s = 0;
+          s < gameConfig.songCount;
+          s++
+        ) {
+          gameState[t][s] = {
+            raw: null,
+            avg: null
+          };
         }
       }
+
       selectCell(0, 0);
       recalculateAll();
       saveToLocalStorage();
