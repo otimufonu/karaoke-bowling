@@ -228,17 +228,17 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 9.5px;
+      font-size: 10px;
       color: #333;
       overflow: hidden;
       white-space: nowrap;
       position: relative;
     }
 
-    /* ストライク：白文字に赤塗り潰し */
+    /* ストライク：黒文字に赤塗り潰し */
     .cell-tr.badge-strike {
       background-color: #e74c3c;
-      color: #ffffff;
+      color: #111111;
       font-weight: bold;
     }
 
@@ -495,10 +495,10 @@
       <div class="rule-desc">※①以上の場合の基本点 ＝ 【 素点 ＋ (素点 － 全国平均) × 通常倍率 】</div>
 
       <div class="inline-inputs">
-        ③ ストライク [✕] 判定閾値: 平均差 × 通常倍率 ≧
+        ③ ストライク判定閾値: 平均差 × 通常倍率 ≧
         <input type="number" id="strikeThresholdInput" value="10" step="1"> 点
       </div>
-      <div class="rule-desc">※①以上かつ③達成で「ストライク ✕」(次曲ボーナスあり)。未達成なら「スペア ╱」。</div>
+      <div class="rule-desc">※①以上かつ③達成で「ストライク」(次曲ボーナスあり)。未達成なら「スペア」。</div>
 
       <div class="inline-inputs">
         ④ 次曲90点以上時の追加ボーナス倍率:
@@ -507,14 +507,14 @@
       <div class="rule-desc">※ストライク後の曲が90点以上の時、前曲ボーナスは 【 次曲平均差 × 通常倍率 × 追加倍率 】</div>
 
       <div class="inline-inputs">
-        ⑤ スプリット [〇] 設定: 素点①未満かつ (素点 － 全国平均) ≧
+        ⑤ スプリット設定: 素点①未満かつ (素点 － 全国平均) ≧
         <input type="number" id="splitThresholdInput" value="3" step="1"> 点
       </div>
       <div class="inline-inputs" style="margin-top:2px;">
         スプリット倍率:
         <input type="number" id="splitMultiplierInput" value="1.2" step="0.1"> 倍
       </div>
-      <div class="rule-desc">※素点①未満でも平均差達成で「スプリット 〇」。【 素点 ＋ (素点 － 全国平均) × スプリット倍率 】</div>
+      <div class="rule-desc">※素点①未満でも平均差達成で「スプリット」。【 素点 ＋ (素点 － 全国平均) × スプリット倍率 】</div>
 
       <div class="inline-inputs">
         ⑥ 最終フレーム（最終曲）倍率:
@@ -543,7 +543,7 @@
       <div style="border-top: 1px dashed #b3d7ff; padding-top: 4px; margin-top: 6px;">
         <div class="inline-inputs">
           ② スペア判定: 素点 ＜ 90 点 かつ (素点 － 平均) ≧
-          <input type="number" id="patternB_spareDiffThreshold" value="0" step="1"> 点 (〇)
+          <input type="number" id="patternB_spareDiffThreshold" value="0" step="1"> 点
         </div>
         <div class="rule-desc">通常計算: 素点＋(素点－平均)＋(次回の素点－次回の平均)</div>
         <div class="inline-inputs" style="margin-top:2px;">
@@ -602,7 +602,7 @@
         </table>
       </div>
 
-      <div class="note">※ 左上:素点 / 右上:判定・ボーナス / 下:累計。<b>マス目クリックで編集</b></div>
+      <div class="note">※ 左上:素点 / 右上:ボーナス / 下:累計。<b>マス目クリックで編集</b></div>
 
       <div class="btn-action-container">
         <button class="btn-info" onclick="openDetailModal()">📊 内訳</button>
@@ -748,10 +748,10 @@
     function updateRuleBadgeText() {
       if (gameConfig.rulePattern === 'A') {
         document.getElementById('ruleBadgeText').textContent = 
-          `【パターンA】基準:${gameConfig.threshold}点 | ✕:差×${gameConfig.multiplier}≧${gameConfig.strikeThreshold} | 〇:差≧${gameConfig.splitThreshold}点(×${gameConfig.splitMultiplier}) | 最終:×${gameConfig.finalMultiplier}`;
+          `【パターンA】基準:${gameConfig.threshold}点 | ストライク:差×${gameConfig.multiplier}≧${gameConfig.strikeThreshold} | スプリット:差≧${gameConfig.splitThreshold}点(×${gameConfig.splitMultiplier}) | 最終:×${gameConfig.finalMultiplier}`;
       } else {
         document.getElementById('ruleBadgeText').textContent = 
-          `【パターンB】✕:素点≧90(最終×${gameConfig.patternB_strikeFinalMult}) | ╱:素点<90&差≧${gameConfig.patternB_spareDiffThreshold}(最終×${gameConfig.patternB_spareFinalMult})`;
+          `【パターンB】ストライク:素点≧90(最終×${gameConfig.patternB_strikeFinalMult}) | スペア:素点<90&差≧${gameConfig.patternB_spareDiffThreshold}(最終×${gameConfig.patternB_spareFinalMult})`;
       }
     }
 
@@ -918,9 +918,9 @@
       }
 
       let roleText = '';
-      if (isStrike) roleText = '【ストライク ✕】';
-      else if (isSpare) roleText = '【スペア ╱】';
-      else if (isSplit) roleText = '【スプリット 〇】';
+      if (isStrike) roleText = '【ストライク】';
+      else if (isSpare) roleText = '【スペア】';
+      else if (isSplit) roleText = '【スプリット】';
 
       let msg = `【セット完了】\n${gameConfig.teamNames[team]} (第${song + 1}曲目)\n素点: ${raw} 点 / 平均: ${avg} 点`;
       if (roleText) {
@@ -1086,13 +1086,13 @@
               }
             }
 
-            // 右上マスの表示・デザイン指定処理
+            // 右上マスの表示・デザイン指定（記号は表示せず数値のみ）
             if (res.isStrike) {
               trClass = "badge-strike";
-              displayTR = (bonusPt !== null) ? `✕ ${bonusPt}` : "✕";
+              displayTR = (bonusPt !== null) ? bonusPt : "";
             } else if (res.isSpare) {
               trClass = "badge-spare";
-              displayTR = (bonusPt !== null) ? `╱ ${bonusPt}` : "╱";
+              displayTR = (bonusPt !== null) ? bonusPt : "";
             } else {
               trClass = "";
               displayTR = (bonusPt !== null) ? bonusPt : "";
@@ -1464,9 +1464,9 @@
             totalFinalPoint += finalPoint;
 
             let judgeText = "通常";
-            if (isStrike) judgeText = "ストライク ✕";
-            else if (isSpare) judgeText = "スペア ╱";
-            else if (isSplit) judgeText = "スプリット 〇";
+            if (isStrike) judgeText = "ストライク";
+            else if (isSpare) judgeText = "スペア";
+            else if (isSplit) judgeText = "スプリット";
 
             if (isFinal) judgeText += " (最終)";
 
