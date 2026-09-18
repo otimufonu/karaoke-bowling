@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>カラオケボウリング｜条件ルーレット</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        background: #111;
+        color: #fff;
+        font-family:
+            -apple-system,
+            BlinkMacSystemFont,
+            "Hiragino Kaku Gothic ProN",
+            "Yu Gothic",
+            sans-serif;
+        min-height: 100vh;
+    }
+
+    .app {
+        width: min(720px, 100%);
+        margin: 0 auto;
+        padding: 24px 16px 40px;
+    }
+
+    h1 {
+        margin: 0 0 6px;
+        font-size: 28px;
+        letter-spacing: .04em;
+    }
+
+    .subtitle {
+        color: #999;
+        font-size: 13px;
+        margin-bottom: 24px;
+    }
+
+    .panel {
+        background: #1b1b1b;
+        border: 1px solid #333;
+        border-radius: 16px;
+        padding: 18px;
+        margin-bottom: 16px;
+    }
+
+    .mode-row {
+        display: flex;
+        gap: 8px;
+    }
+
+    .mode-btn {
+        flex: 1;
+        border: 1px solid #444;
+        background: #222;
+        color: #aaa;
+        border-radius: 10px;
+        padding: 12px;
+        font-size: 15px;
+        cursor: pointer;
+    }
+
+    .mode-btn.active {
+        background: #fff;
+        color: #111;
+        border-color: #fff;
+    }
+
+    .roulette {
+        position: relative;
+        height: 240px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        border-radius: 14px;
+        background:
+            radial-gradient(circle at center, #333 0%, #1a1a1a 55%, #111 100%);
+    }
+
+    .pointer {
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 13px solid transparent;
+        border-right: 13px solid transparent;
+        border-top: 22px solid #fff;
+        z-index: 3;
+    }
+
+    .condition {
+        text-align: center;
+        padding: 20px;
+        width: 100%;
+        z-index: 2;
+    }
+
+    .condition-label {
+        color: #999;
+        font-size: 12px;
+        margin-bottom: 10px;
+    }
+
+    .condition-text {
+        font-size: clamp(26px, 7vw, 48px);
+        font-weight: 800;
+        line-height: 1.25;
+        letter-spacing: .02em;
+    }
+
+    .condition-text.free {
+        font-size: clamp(44px, 12vw, 80px);
+    }
+
+    .spinning .condition-text {
+        animation: shake .08s infinite alternate;
+    }
+
+    @keyframes shake {
+        from {
+            transform: translateX(-3px) rotate(-1deg);
+        }
+        to {
+            transform: translateX(3px) rotate(1deg);
+        }
+    }
+
+    .spin-btn {
+        width: 100%;
+        border: 0;
+        background: #fff;
+        color: #111;
+        border-radius: 12px;
+        padding: 17px;
+        font-size: 20px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+
+    .spin-btn:active {
+        transform: scale(.98);
+    }
+
+    .spin-btn:disabled {
+        opacity: .4;
+        cursor: default;
+    }
+
+    .current-info {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 14px;
+    }
+
+    .info-box {
+        background: #222;
+        border-radius: 10px;
+        padding: 12px;
+    }
+
+    .info-label {
+        font-size: 11px;
+        color: #888;
+        margin-bottom: 5px;
+    }
+
+    .info-value {
+        font-size: 16px;
+        font-weight: 700;
+    }
+
+    label {
+        display: block;
+        color: #aaa;
+        font-size: 13px;
+        margin-bottom: 7px;
+    }
+
+    input, select {
+        width: 100%;
+        background: #111;
+        border: 1px solid #444;
+        color: #fff;
+        border-radius: 9px;
+        padding: 12px;
+        font-size: 16px;
+        outline: none;
+    }
+
+    input:focus, select:focus {
+        border-color: #aaa;
+    }
+
+    .history-title {
+        font-size: 14px;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
+
+    .history {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        max-height: 260px;
+        overflow-y: auto;
+    }
+
+    .history-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        background: #222;
+        border-radius: 9px;
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+
+    .history-condition {
+        font-weight: 700;
+    }
+
+    .history-meta {
+        color: #888;
+        white-space: nowrap;
+    }
+
+    .empty {
+        color: #666;
+        font-size: 13px;
+    }
+
+    .notice {
+        color: #999;
+        font-size: 12px;
+        line-height: 1.7;
+    }
+
+    .reset-btn {
+        margin-top: 12px;
+        width: 100%;
+        background: transparent;
+        color: #888;
+        border: 1px solid #333;
+        border-radius: 9px;
+        padding: 10px;
+        cursor: pointer;
+    }
+
+    @media (max-width: 480px) {
+        .app {
+            padding: 18px 12px 30px;
+        }
+
+        h1 {
+            font-size: 23px;
+        }
+
+        .roulette {
+            height: 210px;
+        }
+    }
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+    <h1>カラオケボウリング</h1>
+    <div class="subtitle">条件ルーレット 試作版</div>
+
+    <!-- 難易度 -->
+    <div class="panel">
+        <label>条件セット</label>
+
+        <div class="mode-row">
+            <button class="mode-btn active" data-mode="easy">
+                EASY
+            </button>
+
+            <button class="mode-btn" data-mode="hard">
+                HARD
+            </button>
+        </div>
+    </div>
+
+    <!-- ルーレット -->
+    <div class="panel">
+
+        <div class="roulette" id="roulette">
+
+            <div class="pointer"></div>
+
+            <div class="condition">
+                <div class="condition-label">
+                    今回の条件
+                </div>
+
+                <div class="condition-text" id="conditionText">
+                    ルーレットを回そう
+                </div>
+            </div>
+
+        </div>
+
+        <button
+            class="spin-btn"
+            id="spinBtn"
+            onclick="spinRoulette()">
+            🎤 条件を決める
+        </button>
+
+        <div class="current-info">
+
+            <div class="info-box">
+                <div class="info-label">
+                    難易度
+                </div>
+                <div class="info-value" id="difficulty">
+                    EASY
+                </div>
+            </div>
+
+            <div class="info-box">
+                <div class="info-label">
+                    条件倍率
+                </div>
+                <div class="info-value" id="multiplier">
+                    ×1.0
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- 前の曲 -->
+    <div class="panel">
+
+        <label for="previousSong">
+            前の人の曲タイトル
+            （しりとり条件用）
+        </label>
+
+        <input
+            id="previousSong"
+            type="text"
+            placeholder="例：チェリー">
+
+        <div class="notice" style="margin-top:8px;">
+            「前の人の曲タイトルとしりとり」が出た場合、
+            このタイトルを参考にしてください。
+        </div>
+
+    </div>
+
+    <!-- 履歴 -->
+    <div class="panel">
+
+        <div class="history-title">
+            条件履歴
+        </div>
+
+        <div class="history" id="history">
+            <div class="empty">
+                まだ条件はありません。
+            </div>
+        </div>
+
+        <button
+            class="reset-btn"
+            onclick="resetHistory()">
+            履歴を消去
+        </button>
+
+    </div>
+
+    <div class="notice">
+        ※「歌詞に○○がある」などの条件は、デンモク等で参加者が確認する想定です。<br>
+        ※この試作では条件の有効性を自動判定しません。
+    </div>
+
+</div>
+
+<script>
+
+/* =========================================================
+   条件データ
+   ========================================================= */
+
+const conditionSets = {
+
+    easy: [
+
+        {
+            text: "あ行から始まるアーティスト または 曲名",
+            multiplier: 1.0
+        },
+        {
+            text: "か行から始まるアーティスト または 曲名",
+            multiplier: 1.0
+        },
+        {
+            text: "さ行から始まるアーティスト または 曲名",
+            multiplier: 1.0
+        },
+        {
+            text: "た行から始まるアーティスト または 曲名",
+            multiplier: 1.0
+        },
+        {
+            text: "な行から始まるアーティスト または 曲名",
+            multiplier: 1.0
+        },
+        {
+            text: "は行から始まるアーティスト または 曲名",
+            multiplier: 1.0
+        },
+        {
+            text: "ま行から始まるアーティスト または 曲名",
+            multiplier: 1.0
+        },
+        {
+            text: "や行から始まるアーティスト または 曲名",
+            multiplier: 1.0
+        },
+        {
+            text: "ら行から始まるアーティスト または 曲名",
+            multiplier: 1.0
+        },
+        {
+            text: "わ行から始まるアーティスト または 曲名",
+            multiplier: 1.0
+        },
+
+        {
+            text: "タイトルに漢字が入っている",
+            multiplier: 1.0
+        },
+        {
+            text: "タイトルにカタカナが入っている",
+            multiplier: 1.0
+        },
+        {
+            text: "タイトルに数字が入っている",
+            multiplier: 1.1
+        },
+        {
+            text: "タイトルに色が入っている",
+            multiplier: 1.1
+        },
+        {
+            text: "タイトルに動物が入っている",
+            multiplier: 1.1
+        },
+        {
+            text: "タイトルに食べ物が入っている",
+            multiplier: 1.1
+        },
+
+        {
+            text: "歌詞に食べ物が出てくる",
+            multiplier: 1.1
+        },
+        {
+            text: "歌詞に飲み物が出てくる",
+            multiplier: 1.1
+        },
+        {
+            text: "歌詞に動物が出てくる",
+            multiplier: 1.1
+        },
+        {
+            text: "歌詞に色が出てくる",
+            multiplier: 1.1
+        },
+        {
+            text: "歌詞に数字が出てくる",
+            multiplier: 1.1
+        },
+
+        {
+            text: "アニメに使われた曲",
+            multiplier: 1.0
+        },
+        {
+            text: "ドラマに使われた曲",
+            multiplier: 1.0
+        },
+        {
+            text: "映画に使われた曲",
+            multiplier: 1.1
+        },
+        {
+            text: "CMに使われた曲",
+            multiplier: 1.1
+        },
+
+        {
+            text: "2000年代の曲",
+            multiplier: 1.0
+        },
+        {
+            text: "2010年代の曲",
+            multiplier: 1.0
+        },
+        {
+            text: "2020年代の曲",
+            multiplier: 1.0
+        },
+
+        {
+            text: "男性アーティスト",
+            multiplier: 1.0
+        },
+        {
+            text: "女性アーティスト",
+            multiplier: 1.0
+        },
+
+        {
+            text: "自由！",
+            multiplier: 0.9,
+            free: true
+        }
+
+    ],
+
+    hard: [
+
+        {
+            text: "タイトルがカタカナのみ",
+            multiplier: 1.5
+        },
+        {
+            text: "タイトルが漢字のみ",
+            multiplier: 1.6
+        },
+        {
+            text: "タイトルがひらがなのみ",
+            multiplier: 1.6
+        },
+        {
+            text: "タイトルがアルファベットのみ",
+            multiplier: 1.7
+        },
+
+        {
+            text: "アーティスト名と曲名が同じ文字から始まる",
+            multiplier: 1.5
+        },
+
+        {
+            text: "タイトルに地名が入っている",
+            multiplier: 1.4
+        },
+
+        {
+            text: "歌詞に地名が出てくる",
+            multiplier: 1.4
+        },
+
+        {
+            text: "歌詞に乗り物が出てくる",
+            multiplier: 1.4
+        },
+
+        {
+            text: "歌詞に季節が出てくる",
+            multiplier: 1.4
+        },
+
+        {
+            text: "歌詞に天気・天候が出てくる",
+            multiplier: 1.4
+        },
+
+        {
+            text: "歌詞に身体の部位が出てくる",
+            multiplier: 1.5
+        },
+
+        {
+            text: "歌詞に英単語が出てくる",
+            multiplier: 1.4
+        },
+
+        {
+            text: "平成の曲",
+            multiplier: 1.3
+        },
+
+        {
+            text: "令和の曲",
+            multiplier: 1.3
+        },
+
+        {
+            text: "タイトルに数字が2つ以上入っている",
+            multiplier: 1.8
+        },
+
+        {
+            text: "タイトルが5文字以下",
+            multiplier: 1.5
+        },
+
+        {
+            text: "タイトルが10文字以上",
+            multiplier: 1.5
+        },
+
+        {
+            text: "前の人の曲タイトルとしりとり",
+            multiplier: 1.8
+        },
+
+        {
+            text: "前の人と同じ頭文字の曲",
+            multiplier: 1.5
+        },
+
+        {
+            text: "前の人と同じアーティスト",
+            multiplier: 1.8
+        },
+
+        {
+            text: "自由！",
+            multiplier: 0.9,
+            free: true
+        }
+
+    ]
+
+};
+
+
+/* =========================================================
+   状態
+   ========================================================= */
+
+let currentMode = "easy";
+let currentCondition = null;
+let spinning = false;
+
+
+/* =========================================================
+   DOM
+   ========================================================= */
+
+const conditionText =
+    document.getElementById("conditionText");
+
+const roulette =
+    document.getElementById("roulette");
+
+const spinBtn =
+    document.getElementById("spinBtn");
+
+const difficulty =
+    document.getElementById("difficulty");
+
+const multiplier =
+    document.getElementById("multiplier");
+
+const history =
+    document.getElementById("history");
+
+
+/* =========================================================
+   難易度切替
+   ========================================================= */
+
+document.querySelectorAll(".mode-btn").forEach(button => {
+
+    button.addEventListener("click", () => {
+
+        if (spinning) return;
+
+        currentMode = button.dataset.mode;
+
+        document
+            .querySelectorAll(".mode-btn")
+            .forEach(btn => {
+                btn.classList.remove("active");
+            });
+
+        button.classList.add("active");
+
+        difficulty.textContent =
+            currentMode.toUpperCase();
+
+        conditionText.textContent =
+            "ルーレットを回そう";
+
+        conditionText.classList.remove("free");
+
+        currentCondition = null;
+        multiplier.textContent = "×1.0";
+
+    });
+
+});
+
+
+/* =========================================================
+   ルーレット
+   ========================================================= */
+
+function spinRoulette() {
+
+    if (spinning) return;
+
+    spinning = true;
+    spinBtn.disabled = true;
+
+    roulette.classList.add("spinning");
+
+    const conditions =
+        conditionSets[currentMode];
+
+    let counter = 0;
+
+    /*
+       最初は高速で条件を切り替え、
+       徐々に速度を落とす。
+    */
+
+    let delay = 55;
+
+    function tick() {
+
+        const randomIndex =
+            Math.floor(Math.random() * conditions.length);
+
+        const temp =
+            conditions[randomIndex];
+
+        conditionText.textContent =
+            temp.text;
+
+        conditionText.classList.toggle(
+            "free",
+            !!temp.free
+        );
+
+        counter++;
+
+        if (counter < 22) {
+
+            delay += 8;
+
+            setTimeout(tick, delay);
+
+        } else {
+
+            finishRoulette();
+
+        }
+
+    }
+
+    tick();
+}
+
+
+/* =========================================================
+   結果確定
+   ========================================================= */
+
+function finishRoulette() {
+
+    const conditions =
+        conditionSets[currentMode];
+
+    /*
+       重み付けしたい場合は、
+       ここを変更すればOK。
+
+       現在は完全ランダム。
+    */
+
+    const resultIndex =
+        Math.floor(Math.random() * conditions.length);
+
+    currentCondition =
+        conditions[resultIndex];
+
+    conditionText.textContent =
+        currentCondition.text;
+
+    conditionText.classList.toggle(
+        "free",
+        !!currentCondition.free
+    );
+
+    multiplier.textContent =
+        "×" + currentCondition.multiplier.toFixed(1);
+
+    roulette.classList.remove("spinning");
+
+    addHistory(currentCondition);
+
+    spinning = false;
+    spinBtn.disabled = false;
+
+}
+
+
+/* =========================================================
+   履歴
+   ========================================================= */
+
+function addHistory(condition) {
+
+    const empty =
+        history.querySelector(".empty");
+
+    if (empty) {
+        history.innerHTML = "";
+    }
+
+    const item =
+        document.createElement("div");
+
+    item.className = "history-item";
+
+    const number =
+        history.children.length + 1;
+
+    item.innerHTML = `
+        <div>
+            <div class="history-condition">
+                ${number}. ${escapeHtml(condition.text)}
+            </div>
+        </div>
+
+        <div class="history-meta">
+            ×${condition.multiplier.toFixed(1)}
+        </div>
+    `;
+
+    history.prepend(item);
+
+}
+
+
+/* =========================================================
+   履歴リセット
+   ========================================================= */
+
+function resetHistory() {
+
+    history.innerHTML = `
+        <div class="empty">
+            まだ条件はありません。
+        </div>
+    `;
+
+    conditionText.textContent =
+        "ルーレットを回そう";
+
+    conditionText.classList.remove("free");
+
+    multiplier.textContent = "×1.0";
+
+    currentCondition = null;
+
+}
+
+
+/* =========================================================
+   HTMLエスケープ
+   ========================================================= */
+
+function escapeHtml(text) {
+
+    const div =
+        document.createElement("div");
+
+    div.textContent = text;
+
+    return div.innerHTML;
+
+}
+
+</script>
+
+</body>
+</html>
