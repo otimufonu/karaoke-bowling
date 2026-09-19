@@ -505,6 +505,22 @@
       font-weight: bold;
       font-size: 11px;
     }
+
+    /* ルーレットモーダル専用調整 */
+    .roulette-modal-content {
+      max-width: 600px;
+      height: 85vh;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .roulette-iframe {
+      width: 100%;
+      flex: 1;
+      border: none;
+      border-radius: 6px;
+    }
   </style>
 </head>
 <body>
@@ -669,7 +685,7 @@
 
       <!-- ルーレットを回すボタン -->
       <div class="roulette-container">
-        <button class="btn-roulette" onclick="location.href='roulette.html'">ルーレットを<br>回す</button>
+        <button class="btn-roulette" onclick="openRouletteModal()">ルーレットを<br>回す</button>
       </div>
 
       <!-- 残り所要時間表示 -->
@@ -710,6 +726,17 @@
         <button class="btn-main" id="pdfExportBtn" style="background: #27ae60; padding: 10px; font-size: 14px;" onclick="exportToPDF()">📄 スコア表＆内訳をPDF出力</button>
         <button class="btn-sub" style="padding: 8px; font-size: 12px;" onclick="closeResultModal()">閉じる</button>
       </div>
+    </div>
+  </div>
+
+  <!-- 5. ルーレットモーダル画面 -->
+  <div id="rouletteModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content roulette-modal-content">
+      <div class="modal-header" style="margin-bottom: 6px;">
+        <h2>🎰 ルーレット</h2>
+        <button class="btn-close" onclick="closeRouletteModal()">閉じる</button>
+      </div>
+      <iframe id="rouletteFrame" class="roulette-iframe" src=""></iframe>
     </div>
   </div>
 
@@ -1156,9 +1183,6 @@
 
     /*
      * 残り所要時間を計算して表示
-     *
-     * 1フレーム = 1チームの1曲分
-     * 未入力フレーム数 × 4分
      */
     function updateRemainingTime() {
       const remainingTimeElement =
@@ -1511,9 +1535,6 @@
         );
       }
 
-      /*
-       * スコア再計算の最後に残り時間も更新
-       */
       updateRemainingTime();
     }
 
@@ -2274,6 +2295,20 @@
       document.getElementById(
         'detailModal'
       ).style.display = 'none';
+    }
+
+    /* ルーレットモーダルの操作関数 */
+    function openRouletteModal() {
+      const frame = document.getElementById('rouletteFrame');
+      // 開く際にroulette.htmlを読み込み
+      if (!frame.src || frame.src === 'about:blank') {
+        frame.src = 'roulette.html';
+      }
+      document.getElementById('rouletteModal').style.display = 'flex';
+    }
+
+    function closeRouletteModal() {
+      document.getElementById('rouletteModal').style.display = 'none';
     }
 
     function resetGame() {
