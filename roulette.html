@@ -6,1580 +6,1387 @@
 <title>カラオケボウリング｜条件ルーレット</title>
 
 <style>
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  background: #111;
-  color: #fff;
-  font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    "Helvetica Neue",
-    "Yu Gothic",
-    "Hiragino Kaku Gothic ProN",
-    sans-serif;
-  overflow-x: hidden;
-}
-
-.container {
-  width: min(700px, 94%);
-  margin: 0 auto;
-  padding: 24px 0 50px;
-}
-
-h1 {
-  text-align: center;
-  font-size: 24px;
-  margin: 10px 0 24px;
-}
-
-.mode {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-.mode button {
-  flex: 1;
-  padding: 14px;
-  border: 1px solid #555;
-  border-radius: 10px;
-  background: #222;
-  color: #aaa;
-  font-size: 16px;
-  font-weight: bold;
-}
-
-.mode button.active {
-  background: #fff;
-  color: #111;
-}
-
-button {
-  cursor: pointer;
-}
-
-/* ============================================================
-   ルーレット本体
-   ============================================================ */
-
-.roulette {
-  min-height: 190px;
-  border: 2px solid #444;
-  border-radius: 18px;
-  background: #181818;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-
-  padding: 25px;
-  margin-bottom: 18px;
-
-  position: relative;
-  overflow: hidden;
-
-  transform-origin: center center;
-}
-
-/*
-  回転中の外枠。
-  animation は JS から .spinning を付けて発動。
-*/
-
-.roulette.spinning {
-  animation:
-    rouletteShake 0.11s infinite alternate,
-    roulettePulse 0.8s infinite;
-}
-
-.roulette.spinning::before {
-  content: "";
-  position: absolute;
-  inset: -30%;
-
-  background:
-    radial-gradient(
-      circle,
-      rgba(255,255,255,0.10) 0%,
-      rgba(255,255,255,0.03) 35%,
-      transparent 70%
-    );
-
-  animation: rouletteGlow 0.45s infinite alternate;
-  pointer-events: none;
-}
-
-
-/* ============================================================
-   条件文字
-   ============================================================ */
-
-.condition {
-  position: relative;
-  z-index: 2;
-
-  font-size: clamp(24px, 6vw, 42px);
-  font-weight: bold;
-  line-height: 1.35;
-
-  transform-origin: center center;
-}
-
-
-/*
-  回転中の文字。
-  枠より少し激しく動かす。
-*/
-
-.condition.spinning {
-  animation:
-    conditionShake 0.075s infinite alternate,
-    conditionScale 0.22s infinite alternate;
-}
-
-
-/*
-  最終結果が決まった瞬間。
-*/
-
-.condition.result {
-  animation: resultPop 0.55s cubic-bezier(.17,.89,.32,1.28);
-}
-
-
-/* ============================================================
-   アニメーション
-   ============================================================ */
-
-@keyframes rouletteShake {
-
-  0% {
-    transform:
-      translateX(-4px)
-      rotate(-0.8deg);
-  }
-
-  100% {
-    transform:
-      translateX(4px)
-      rotate(0.8deg);
-  }
-
-}
-
-@keyframes roulettePulse {
-
-  0% {
-    box-shadow:
-      0 0 0 rgba(255,255,255,0);
-  }
-
-  50% {
-    box-shadow:
-      0 0 25px rgba(255,255,255,0.08);
-  }
-
-  100% {
-    box-shadow:
-      0 0 0 rgba(255,255,255,0);
-  }
-
-}
-
-@keyframes rouletteGlow {
-
-  0% {
-    transform: scale(0.9);
-    opacity: .2;
-  }
-
-  100% {
-    transform: scale(1.15);
-    opacity: .65;
-  }
-
-}
-
-@keyframes conditionShake {
-
-  0% {
-    transform:
-      translate(
-        -5px,
-        1px
-      )
-      rotate(-1.2deg);
-  }
-
-  25% {
-    transform:
-      translate(
-        4px,
-        -1px
-      )
-      rotate(1deg);
-  }
-
-  50% {
-    transform:
-      translate(
-        -3px,
-        2px
-      )
-      rotate(-0.8deg);
-  }
-
-  75% {
-    transform:
-      translate(
-        5px,
-        -1px
-      )
-      rotate(1.1deg);
-  }
-
-  100% {
-    transform:
-      translate(
-        -4px,
-        0
-      )
-      rotate(-1deg);
-  }
-
-}
-
-@keyframes conditionScale {
-
-  0% {
-    scale: 0.98;
-  }
-
-  100% {
-    scale: 1.03;
-  }
-
-}
-
-@keyframes resultPop {
-
-  0% {
-    transform:
-      scale(0.65)
-      rotate(-3deg);
-    opacity: 0;
-  }
-
-  45% {
-    transform:
-      scale(1.16)
-      rotate(1deg);
-    opacity: 1;
-  }
-
-  70% {
-    transform:
-      scale(0.96)
-      rotate(-0.4deg);
-  }
-
-  100% {
-    transform:
-      scale(1)
-      rotate(0);
-  }
-
-}
-
-
-/* ============================================================
-   回転中のボタン
-   ============================================================ */
-
-.spin {
-  width: 100%;
-  padding: 18px;
-  border: none;
-  border-radius: 12px;
-  background: #fff;
-  color: #111;
-  font-size: 20px;
-  font-weight: bold;
-
-  transition:
-    transform .1s,
-    opacity .2s;
-}
-
-.spin:active:not(:disabled) {
-  transform: scale(.97);
-}
-
-.spin:disabled {
-  opacity: .4;
-  cursor: default;
-}
-
-
-/* ============================================================
-   情報
-   ============================================================ */
-
-.info {
-  margin-top: 18px;
-  padding: 16px;
-  background: #1b1b1b;
-  border-radius: 12px;
-
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.infoBox {
-  text-align: center;
-  background: #242424;
-  border-radius: 10px;
-  padding: 12px;
-}
-
-.infoLabel {
-  font-size: 12px;
-  color: #999;
-}
-
-.infoValue {
-  margin-top: 5px;
-  font-size: 22px;
-  font-weight: bold;
-}
-
-
-/* ============================================================
-   入力
-   ============================================================ */
-
-.inputs {
-  margin-top: 20px;
-}
-
-.inputs label {
-  display: block;
-  margin-bottom: 6px;
-  color: #aaa;
-  font-size: 13px;
-}
-
-.inputs input {
-  width: 100%;
-  padding: 13px;
-  border: 1px solid #444;
-  border-radius: 8px;
-  background: #1c1c1c;
-  color: #fff;
-  font-size: 16px;
-  margin-bottom: 12px;
-}
-
-
-/* ============================================================
-   履歴
-   ============================================================ */
-
-.history {
-  margin-top: 24px;
-}
-
-.history h2 {
-  font-size: 17px;
-  margin-bottom: 10px;
-}
-
-.historyItem {
-  padding: 10px 12px;
-  background: #1b1b1b;
-  border-radius: 8px;
-  margin-bottom: 7px;
-  font-size: 14px;
-}
-
-.historyMeta {
-  color: #888;
-  font-size: 11px;
-  margin-top: 3px;
-}
-
-.subButtons {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.subButtons button {
-  flex: 1;
-  padding: 11px;
-  border: 1px solid #444;
-  border-radius: 8px;
-  background: #222;
-  color: #ccc;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-
-/* ============================================================
-   アニメーションを抑える設定
-   ============================================================ */
-
-@media (prefers-reduced-motion: reduce) {
-
-  .roulette.spinning,
-  .condition.spinning,
-  .roulette.spinning::before {
-    animation: none;
-  }
-
-}
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        background: #111;
+        color: #fff;
+        font-family:
+            -apple-system,
+            BlinkMacSystemFont,
+            "Hiragino Kaku Gothic ProN",
+            "Yu Gothic",
+            sans-serif;
+        min-height: 100vh;
+    }
+
+    .app {
+        width: min(720px, 100%);
+        margin: 0 auto;
+        padding: 24px 16px 40px;
+    }
+
+    h1 {
+        margin: 0 0 6px;
+        font-size: 28px;
+        letter-spacing: .04em;
+    }
+
+    .subtitle {
+        color: #999;
+        font-size: 13px;
+        margin-bottom: 24px;
+    }
+
+    .panel {
+        background: #1b1b1b;
+        border: 1px solid #333;
+        border-radius: 16px;
+        padding: 18px;
+        margin-bottom: 16px;
+    }
+
+    .mode-row {
+        display: flex;
+        gap: 8px;
+    }
+
+    .mode-btn {
+        flex: 1;
+        border: 1px solid #444;
+        background: #222;
+        color: #aaa;
+        border-radius: 10px;
+        padding: 12px;
+        font-size: 15px;
+        cursor: pointer;
+    }
+
+    .mode-btn.active {
+        background: #fff;
+        color: #111;
+        border-color: #fff;
+    }
+
+    /* =====================================================
+       ルーレット本体
+       ===================================================== */
+
+    .roulette {
+        position: relative;
+        height: 240px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        border-radius: 14px;
+        background:
+            radial-gradient(circle at center, #333 0%, #1a1a1a 55%, #111 100%);
+    }
+
+    /* 回転中の外側の発光 */
+    .roulette::before {
+        content: "";
+        position: absolute;
+        inset: -30%;
+        border-radius: 50%;
+        background:
+            radial-gradient(
+                circle,
+                rgba(255,255,255,.18) 0%,
+                rgba(255,255,255,.07) 25%,
+                transparent 60%
+            );
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .roulette.spinning {
+        animation:
+            rouletteShake .075s infinite alternate,
+            roulettePulse .45s infinite alternate;
+    }
+
+    .roulette.spinning::before {
+        opacity: 1;
+        animation: rouletteGlow .55s infinite alternate;
+    }
+
+    .pointer {
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 13px solid transparent;
+        border-right: 13px solid transparent;
+        border-top: 22px solid #fff;
+        z-index: 3;
+        filter: drop-shadow(0 0 5px rgba(255,255,255,.5));
+    }
+
+    .condition {
+        text-align: center;
+        padding: 20px;
+        width: 100%;
+        z-index: 2;
+        transform-origin: center;
+    }
+
+    .condition-label {
+        color: #999;
+        font-size: 12px;
+        margin-bottom: 10px;
+    }
+
+    .condition-text {
+        font-size: clamp(26px, 7vw, 48px);
+        font-weight: 800;
+        line-height: 1.25;
+        letter-spacing: .02em;
+    }
+
+    .condition-text.free {
+        font-size: clamp(44px, 12vw, 80px);
+    }
+
+    /* -----------------------------------------------------
+       回転中：以前の「揺れる」感じを強めた演出
+       ----------------------------------------------------- */
+
+    .spinning .condition {
+        animation:
+            conditionShake .075s infinite alternate,
+            conditionScale .22s infinite alternate;
+    }
+
+    .spinning .condition-text {
+        animation: textShake .055s infinite alternate;
+        text-shadow:
+            0 0 8px rgba(255,255,255,.35);
+    }
+
+    /* -----------------------------------------------------
+       結果が決まった瞬間
+       ----------------------------------------------------- */
+
+    .roulette.result {
+        animation: resultImpact .45s ease-out;
+    }
+
+    .roulette.result::before {
+        animation: resultFlash .45s ease-out;
+    }
+
+    .condition.result {
+        animation: resultPop .55s cubic-bezier(.16,1.4,.4,1);
+    }
+
+    .condition.result .condition-text {
+        text-shadow:
+            0 0 8px rgba(255,255,255,.35),
+            0 0 20px rgba(255,255,255,.18);
+    }
+
+    /* =====================================================
+       アニメーション
+       ===================================================== */
+
+    @keyframes rouletteShake {
+        0% {
+            transform: translate(0, 0) rotate(0deg);
+        }
+
+        25% {
+            transform: translate(-3px, 1px) rotate(-.5deg);
+        }
+
+        50% {
+            transform: translate(3px, -1px) rotate(.5deg);
+        }
+
+        75% {
+            transform: translate(-2px, -1px) rotate(-.4deg);
+        }
+
+        100% {
+            transform: translate(2px, 1px) rotate(.4deg);
+        }
+    }
+
+    @keyframes roulettePulse {
+        from {
+            box-shadow:
+                inset 0 0 0 rgba(255,255,255,0);
+        }
+
+        to {
+            box-shadow:
+                inset 0 0 45px rgba(255,255,255,.12);
+        }
+    }
+
+    @keyframes rouletteGlow {
+        from {
+            transform: scale(.85);
+            opacity: .25;
+        }
+
+        to {
+            transform: scale(1.15);
+            opacity: .8;
+        }
+    }
+
+    @keyframes conditionShake {
+        0% {
+            transform: translateX(-5px) rotate(-1.5deg);
+        }
+
+        50% {
+            transform: translateX(4px) rotate(1deg);
+        }
+
+        100% {
+            transform: translateX(-3px) rotate(-1deg);
+        }
+    }
+
+    @keyframes conditionScale {
+        from {
+            transform: scale(.97);
+        }
+
+        to {
+            transform: scale(1.03);
+        }
+    }
+
+    @keyframes textShake {
+        from {
+            transform: translateX(-4px) rotate(-1deg);
+        }
+
+        to {
+            transform: translateX(4px) rotate(1deg);
+        }
+    }
+
+    @keyframes resultImpact {
+        0% {
+            transform: scale(1);
+        }
+
+        25% {
+            transform: scale(1.045);
+        }
+
+        55% {
+            transform: scale(.985);
+        }
+
+        100% {
+            transform: scale(1);
+        }
+    }
+
+    @keyframes resultFlash {
+        0% {
+            opacity: .9;
+        }
+
+        35% {
+            opacity: .35;
+        }
+
+        100% {
+            opacity: 0;
+        }
+    }
+
+    @keyframes resultPop {
+        0% {
+            opacity: .5;
+            transform: scale(.65);
+        }
+
+        45% {
+            opacity: 1;
+            transform: scale(1.12);
+        }
+
+        70% {
+            transform: scale(.96);
+        }
+
+        100% {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    /* =====================================================
+       ボタン
+       ===================================================== */
+
+    .spin-btn {
+        width: 100%;
+        border: 0;
+        background: #fff;
+        color: #111;
+        border-radius: 12px;
+        padding: 17px;
+        font-size: 20px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: transform .08s ease;
+    }
+
+    .spin-btn:active {
+        transform: scale(.98);
+    }
+
+    .spin-btn:disabled {
+        opacity: .4;
+        cursor: default;
+    }
+
+    .current-info {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 14px;
+    }
+
+    .info-box {
+        background: #222;
+        border-radius: 10px;
+        padding: 12px;
+    }
+
+    .info-label {
+        font-size: 11px;
+        color: #888;
+        margin-bottom: 5px;
+    }
+
+    .info-value {
+        font-size: 16px;
+        font-weight: 700;
+    }
+
+    label {
+        display: block;
+        color: #aaa;
+        font-size: 13px;
+        margin-bottom: 7px;
+    }
+
+    input, select {
+        width: 100%;
+        background: #111;
+        border: 1px solid #444;
+        color: #fff;
+        border-radius: 9px;
+        padding: 12px;
+        font-size: 16px;
+        outline: none;
+    }
+
+    input:focus, select:focus {
+        border-color: #aaa;
+    }
+
+    .history-title {
+        font-size: 14px;
+        font-weight: 700;
+        margin-bottom: 10px;
+    }
+
+    .history {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        max-height: 260px;
+        overflow-y: auto;
+    }
+
+    .history-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        background: #222;
+        border-radius: 9px;
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+
+    .history-condition {
+        font-weight: 700;
+    }
+
+    .history-meta {
+        color: #888;
+        white-space: nowrap;
+    }
+
+    .empty {
+        color: #666;
+        font-size: 13px;
+    }
+
+    .notice {
+        color: #999;
+        font-size: 12px;
+        line-height: 1.7;
+    }
+
+    .reset-btn {
+        margin-top: 12px;
+        width: 100%;
+        background: transparent;
+        color: #888;
+        border: 1px solid #333;
+        border-radius: 9px;
+        padding: 10px;
+        cursor: pointer;
+    }
+
+    @media (max-width: 480px) {
+        .app {
+            padding: 18px 12px 30px;
+        }
+
+        h1 {
+            font-size: 23px;
+        }
+
+        .roulette {
+            height: 210px;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .roulette.spinning,
+        .roulette.spinning::before,
+        .spinning .condition,
+        .spinning .condition-text,
+        .roulette.result,
+        .roulette.result::before,
+        .condition.result {
+            animation: none;
+        }
+    }
 </style>
 </head>
 
 <body>
 
-<div class="container">
+<div class="app">
 
-  <h1>
-    カラオケボウリング<br>
-    条件ルーレット
-  </h1>
+    <h1>カラオケボウリング</h1>
+    <div class="subtitle">条件ルーレット 試作版</div>
 
+    <!-- 難易度 -->
+    <div class="panel">
+        <label>条件セット</label>
 
-  <div class="mode">
+        <div class="mode-row">
+            <button class="mode-btn active" data-mode="easy">
+                EASY
+            </button>
 
-    <button id="easyBtn" class="active">
-      EASY
-    </button>
-
-    <button id="hardBtn">
-      HARD
-    </button>
-
-  </div>
-
-
-  <div id="rouletteBox" class="roulette">
-
-    <div id="condition" class="condition">
-      READY?
+            <button class="mode-btn" data-mode="hard">
+                HARD
+            </button>
+        </div>
     </div>
 
-  </div>
+    <!-- ルーレット -->
+    <div class="panel">
 
+        <div class="roulette" id="roulette">
 
-  <button id="spinBtn" class="spin">
-    ルーレットを回す
-  </button>
+            <div class="pointer"></div>
 
+            <div class="condition" id="condition">
 
-  <div class="info">
+                <div class="condition-label">
+                    今回の条件
+                </div>
 
-    <div class="infoBox">
+                <div class="condition-text" id="conditionText">
+                    ルーレットを回そう
+                </div>
 
-      <div class="infoLabel">
-        難易度
-      </div>
+            </div>
 
-      <div
-        id="difficulty"
-        class="infoValue"
-      >
-        EASY
-      </div>
+        </div>
+
+        <button
+            class="spin-btn"
+            id="spinBtn"
+            onclick="spinRoulette()">
+            🎤 条件を決める
+        </button>
+
+        <div class="current-info">
+
+            <div class="info-box">
+                <div class="info-label">
+                    難易度
+                </div>
+                <div class="info-value" id="difficulty">
+                    EASY
+                </div>
+            </div>
+
+            <div class="info-box">
+                <div class="info-label">
+                    条件倍率
+                </div>
+                <div class="info-value" id="multiplier">
+                    ×1.0
+                </div>
+            </div>
+
+        </div>
 
     </div>
 
+    <!-- 前の曲 -->
+    <div class="panel">
 
-    <div class="infoBox">
+        <label for="previousSong">
+            前の人の曲タイトル
+            （しりとり条件用）
+        </label>
 
-      <div class="infoLabel">
-        倍率
-      </div>
+        <input
+            id="previousSong"
+            type="text"
+            placeholder="例：チェリー">
 
-      <div
-        id="multiplier"
-        class="infoValue"
-      >
-        ×1.0
-      </div>
+        <div style="height:12px;"></div>
+
+        <label for="previousArtist">
+            前の人のアーティスト名
+            （しりとり条件用）
+        </label>
+
+        <input
+            id="previousArtist"
+            type="text"
+            placeholder="例：スピッツ">
+
+        <div class="notice" style="margin-top:8px;">
+            「前の人の曲タイトルとしりとり」
+            または
+            「前の人のアーティスト名としりとり」
+            が出た場合、この情報を参考にしてください。
+        </div>
 
     </div>
 
-  </div>
+    <!-- 履歴 -->
+    <div class="panel">
 
+        <div class="history-title">
+            条件履歴
+        </div>
 
-  <div class="inputs">
+        <div class="history" id="history">
+            <div class="empty">
+                まだ条件はありません。
+            </div>
+        </div>
 
-    <label for="previousSong">
-      前の人の曲名
-    </label>
+        <button
+            class="reset-btn"
+            onclick="resetHistory()">
+            履歴を消去
+        </button>
 
-    <input
-      id="previousSong"
-      type="text"
-      placeholder="しりとり条件で使用"
-    >
+    </div>
 
-
-    <label for="previousArtist">
-      前の人のアーティスト名
-    </label>
-
-    <input
-      id="previousArtist"
-      type="text"
-      placeholder="アーティストしりとり条件で使用"
-    >
-
-  </div>
-
-
-  <div class="subButtons">
-
-    <a
-      href="conditions.html"
-      style="flex:1;"
-    >
-
-      <button style="width:100%;">
-        条件を編集
-      </button>
-
-    </a>
-
-  </div>
-
-
-  <div class="history">
-
-    <h2>
-      履歴
-    </h2>
-
-    <div id="historyList"></div>
-
-
-    <button
-      id="resetHistoryBtn"
-      style="
-        width:100%;
-        margin-top:10px;
-        padding:10px;
-        border:1px solid #444;
-        border-radius:8px;
-        background:#222;
-        color:#aaa;
-      "
-    >
-      履歴をリセット
-    </button>
-
-  </div>
+    <div class="notice">
+        ※「歌詞に○○がある」などの条件は、デンモク等で参加者が確認する想定です。<br>
+        ※この試作では条件の有効性を自動判定しません。
+    </div>
 
 </div>
 
-
 <script>
 
-const STORAGE_KEY =
-  "karaokeBowlingConditions_v1";
-
-
-// ============================================================
-// 初期条件
-// ============================================================
-
-const defaultConditions = {
-
-  easy: [
-
-    {
-      category: "その他",
-      text: "自由！",
-      multiplier: 0.9
-    }
-
-  ],
-
-  hard: [
-
-    // アーティスト
-
-    {
-      category: "アーティスト",
-      text: "男性ボーカルの曲",
-      multiplier: 1.4
-    },
-
-    {
-      category: "アーティスト",
-      text: "女性ボーカルの曲",
-      multiplier: 1.4
-    },
-
-    {
-      category: "アーティスト",
-      text: "あ行から始まるアーティスト",
-      multiplier: 1.5
-    },
-
-    {
-      category: "アーティスト",
-      text: "か行から始まるアーティスト",
-      multiplier: 1.5
-    },
-
-    {
-      category: "アーティスト",
-      text: "さ行から始まるアーティスト",
-      multiplier: 1.5
-    },
-
-    {
-      category: "アーティスト",
-      text: "た行から始まるアーティスト",
-      multiplier: 1.5
-    },
-
-    {
-      category: "アーティスト",
-      text: "な行から始まるアーティスト",
-      multiplier: 1.5
-    },
-
-    {
-      category: "アーティスト",
-      text: "は行から始まるアーティスト",
-      multiplier: 1.5
-    },
-
-    {
-      category: "アーティスト",
-      text: "ま行から始まるアーティスト",
-      multiplier: 1.5
-    },
-
-    {
-      category: "アーティスト",
-      text: "や行から始まるアーティスト",
-      multiplier: 1.5
-    },
-
-    {
-      category: "アーティスト",
-      text: "ら行から始まるアーティスト",
-      multiplier: 1.5
-    },
-
-    {
-      category: "アーティスト",
-      text: "わ行から始まるアーティスト",
-      multiplier: 1.5
-    },
-
-    {
-      category: "アーティスト",
-      text: "アーティスト名が漢字から始まる",
-      multiplier: 1.4
-    },
-
-    {
-      category: "アーティスト",
-      text: "アーティスト名がカタカナから始まる",
-      multiplier: 1.4
-    },
-
-    {
-      category: "アーティスト",
-      text: "アーティスト名がひらがなから始まる",
-      multiplier: 1.4
-    },
-
-    {
-      category: "アーティスト",
-      text: "アーティスト名がアルファベットから始まる",
-      multiplier: 1.4
-    },
-
-    {
-      category: "アーティスト",
-      text: "アーティスト名が5文字以上",
-      multiplier: 1.3
-    },
-
-    {
-      category: "アーティスト",
-      text: "アーティスト名が10文字以上",
-      multiplier: 1.5
-    },
-
-    {
-      category: "アーティスト",
-      text: "アーティスト名が5文字以下",
-      multiplier: 1.3
-    },
-
-    {
-      category: "アーティスト",
-      text: "アーティスト名が8文字以下",
-      multiplier: 1.3
-    },
-
-    {
-      category: "アーティスト",
-      text: "ソロアーティスト",
-      multiplier: 1.4
-    },
-
-    {
-      category: "アーティスト",
-      text: "男女混成グループ",
-      multiplier: 1.7
-    },
-
-    {
-      category: "アーティスト",
-      text: "バンド",
-      multiplier: 1.3
-    },
-
-    {
-      category: "アーティスト",
-      text: "アーティスト名に色が入っている",
-      multiplier: 1.7
-    },
-
-
-    // 曲名
-
-    {
-      category: "曲名",
-      text: "あ行から始まる曲名",
-      multiplier: 1.5
-    },
-
-    {
-      category: "曲名",
-      text: "か行から始まる曲名",
-      multiplier: 1.5
-    },
-
-    {
-      category: "曲名",
-      text: "さ行から始まる曲名",
-      multiplier: 1.5
-    },
-
-    {
-      category: "曲名",
-      text: "た行から始まる曲名",
-      multiplier: 1.5
-    },
-
-    {
-      category: "曲名",
-      text: "な行から始まる曲名",
-      multiplier: 1.5
-    },
-
-    {
-      category: "曲名",
-      text: "は行から始まる曲名",
-      multiplier: 1.5
-    },
-
-    {
-      category: "曲名",
-      text: "ま行から始まる曲名",
-      multiplier: 1.5
-    },
-
-    {
-      category: "曲名",
-      text: "や行から始まる曲名",
-      multiplier: 1.5
-    },
-
-    {
-      category: "曲名",
-      text: "ら行から始まる曲名",
-      multiplier: 1.5
-    },
-
-    {
-      category: "曲名",
-      text: "わ行から始まる曲名",
-      multiplier: 1.5
-    },
-
-    {
-      category: "曲名",
-      text: "曲名が漢字のみ",
-      multiplier: 1.7
-    },
-
-    {
-      category: "曲名",
-      text: "曲名がひらがなのみ",
-      multiplier: 1.7
-    },
-
-    {
-      category: "曲名",
-      text: "曲名がカタカナのみ",
-      multiplier: 1.6
-    },
-
-    {
-      category: "曲名",
-      text: "曲名がアルファベットのみ",
-      multiplier: 1.7
-    },
-
-    {
-      category: "曲名",
-      text: "曲名に漢字を含む",
-      multiplier: 1.3
-    },
-
-    {
-      category: "曲名",
-      text: "曲名に数字を含む",
-      multiplier: 1.5
-    },
-
-    {
-      category: "曲名",
-      text: "曲名にアルファベットを含む",
-      multiplier: 1.4
-    },
-
-    {
-      category: "曲名",
-      text: "曲名が5文字以上",
-      multiplier: 1.3
-    },
-
-    {
-      category: "曲名",
-      text: "曲名が10文字以上",
-      multiplier: 1.6
-    },
-
-    {
-      category: "曲名",
-      text: "曲名が5文字以下",
-      multiplier: 1.3
-    },
-
-    {
-      category: "曲名",
-      text: "曲名が8文字以下",
-      multiplier: 1.3
-    },
-
-    {
-      category: "曲名",
-      text: "曲名に「愛」が入っている",
-      multiplier: 1.5
-    },
-
-    {
-      category: "曲名",
-      text: "曲名に「の」が入っている",
-      multiplier: 1.2
-    },
-
-    {
-      category: "曲名",
-      text: "曲名に花の名前が入っている",
-      multiplier: 1.8
-    },
-
-
-    // 年代
-
-    {
-      category: "年代",
-      text: "2000年代以前の曲",
-      multiplier: 1.5
-    },
-
-    {
-      category: "年代",
-      text: "2010年代以降の曲",
-      multiplier: 1.3
-    },
-
-    {
-      category: "年代",
-      text: "昭和の曲",
-      multiplier: 1.8
-    },
-
-    {
-      category: "年代",
-      text: "平成の曲",
-      multiplier: 1.3
-    },
-
-    {
-      category: "年代",
-      text: "令和の曲",
-      multiplier: 1.5
-    },
-
-    {
-      category: "年代",
-      text: "平成生まれのアーティストの曲",
-      multiplier: 1.5
-    },
-
-
-    // タイアップ
-
-    {
-      category: "タイアップ",
-      text: "アニメの曲",
-      multiplier: 1.4
-    },
-
-    {
-      category: "タイアップ",
-      text: "ドラマの曲",
-      multiplier: 1.4
-    },
-
-    {
-      category: "タイアップ",
-      text: "映画の曲",
-      multiplier: 1.5
-    },
-
-    {
-      category: "タイアップ",
-      text: "CMソング",
-      multiplier: 1.5
-    },
-
-
-    // 歌詞
-
-    {
-      category: "歌詞",
-      text: "歌詞に食べ物が出てくる",
-      multiplier: 1.5
-    },
-
-    {
-      category: "歌詞",
-      text: "歌詞に地名が出てくる",
-      multiplier: 1.5
-    },
-
-    {
-      category: "歌詞",
-      text: "歌詞に乗り物が出てくる",
-      multiplier: 1.5
-    },
-
-
-    // ランキング
-
-    {
-      category: "ランキング",
-      text: "カラオケランキングに入っている曲",
-      multiplier: 1.3
-    },
-
-
-    // 前の人とのつながり
-
-    {
-      category: "前の人とのつながり",
-      text: "前の人の曲名としりとり",
-      multiplier: 1.7
-    },
-
-    {
-      category: "前の人とのつながり",
-      text: "前の人のアーティスト名としりとり",
-      multiplier: 1.7
-    }
-
-  ]
+/* =========================================================
+   条件データ
+   ========================================================= */
+
+const conditionSets = {
+
+    easy: [
+
+        {
+            text: "あ行から始まるアーティスト または 曲名",
+            multiplier: 1.0
+        },
+        {
+            text: "か行から始まるアーティスト または 曲名",
+            multiplier: 1.0
+        },
+        {
+            text: "さ行から始まるアーティスト または 曲名",
+            multiplier: 1.0
+        },
+        {
+            text: "た行から始まるアーティスト または 曲名",
+            multiplier: 1.0
+        },
+        {
+            text: "な行から始まるアーティスト または 曲名",
+            multiplier: 1.0
+        },
+        {
+            text: "は行から始まるアーティスト または 曲名",
+            multiplier: 1.0
+        },
+        {
+            text: "ま行から始まるアーティスト または 曲名",
+            multiplier: 1.0
+        },
+        {
+            text: "や行から始まるアーティスト または 曲名",
+            multiplier: 1.0
+        },
+        {
+            text: "ら行から始まるアーティスト または 曲名",
+            multiplier: 1.0
+        },
+        {
+            text: "わ行から始まるアーティスト または 曲名",
+            multiplier: 1.0
+        },
+
+        {
+            text: "タイトルに漢字が入っている",
+            multiplier: 1.0
+        },
+        {
+            text: "タイトルにカタカナが入っている",
+            multiplier: 1.0
+        },
+        {
+            text: "タイトルに数字が入っている",
+            multiplier: 1.1
+        },
+        {
+            text: "タイトルに色が入っている",
+            multiplier: 1.1
+        },
+        {
+            text: "タイトルに動物が入っている",
+            multiplier: 1.1
+        },
+        {
+            text: "タイトルに食べ物が入っている",
+            multiplier: 1.1
+        },
+
+        {
+            text: "歌詞に食べ物が出てくる",
+            multiplier: 1.1
+        },
+        {
+            text: "歌詞に飲み物が出てくる",
+            multiplier: 1.1
+        },
+        {
+            text: "歌詞に動物が出てくる",
+            multiplier: 1.1
+        },
+        {
+            text: "歌詞に色が出てくる",
+            multiplier: 1.1
+        },
+        {
+            text: "歌詞に数字が出てくる",
+            multiplier: 1.1
+        },
+
+        {
+            text: "アニメに使われた曲",
+            multiplier: 1.0
+        },
+        {
+            text: "ドラマに使われた曲",
+            multiplier: 1.0
+        },
+        {
+            text: "映画に使われた曲",
+            multiplier: 1.1
+        },
+        {
+            text: "CMに使われた曲",
+            multiplier: 1.1
+        },
+
+        {
+            text: "2000年代の曲",
+            multiplier: 1.0
+        },
+        {
+            text: "2010年代の曲",
+            multiplier: 1.0
+        },
+        {
+            text: "2020年代の曲",
+            multiplier: 1.0
+        },
+
+        {
+            text: "男性アーティスト",
+            multiplier: 1.0
+        },
+        {
+            text: "女性アーティスト",
+            multiplier: 1.0
+        },
+
+        {
+            text: "自由！",
+            multiplier: 0.9,
+            free: true
+        }
+
+    ],
+
+    hard: [
+
+        /* -----------------------------------------
+           ボーカル
+        ----------------------------------------- */
+
+        {
+            text: "男性ボーカルの曲",
+            multiplier: 1.3
+        },
+        {
+            text: "女性ボーカルの曲",
+            multiplier: 1.3
+        },
+
+
+        /* -----------------------------------------
+           アーティスト頭文字
+        ----------------------------------------- */
+
+        {
+            text: "あ行から始まるアーティスト",
+            multiplier: 1.4
+        },
+        {
+            text: "か行から始まるアーティスト",
+            multiplier: 1.4
+        },
+        {
+            text: "さ行から始まるアーティスト",
+            multiplier: 1.4
+        },
+        {
+            text: "た行から始まるアーティスト",
+            multiplier: 1.4
+        },
+        {
+            text: "な行から始まるアーティスト",
+            multiplier: 1.4
+        },
+        {
+            text: "は行から始まるアーティスト",
+            multiplier: 1.4
+        },
+        {
+            text: "ま行から始まるアーティスト",
+            multiplier: 1.4
+        },
+        {
+            text: "や行から始まるアーティスト",
+            multiplier: 1.4
+        },
+        {
+            text: "ら行から始まるアーティスト",
+            multiplier: 1.4
+        },
+        {
+            text: "わ行から始まるアーティスト",
+            multiplier: 1.4
+        },
+
+
+        /* -----------------------------------------
+           アーティスト表記
+        ----------------------------------------- */
+
+        {
+            text: "アーティスト名が漢字から始まる",
+            multiplier: 1.4
+        },
+        {
+            text: "アーティスト名がカタカナから始まる",
+            multiplier: 1.4
+        },
+        {
+            text: "アーティスト名がひらがなから始まる",
+            multiplier: 1.4
+        },
+        {
+            text: "アーティスト名がアルファベットから始まる",
+            multiplier: 1.4
+        },
+
+        {
+            text: "アーティスト名が5文字以上",
+            multiplier: 1.5
+        },
+        {
+            text: "アーティスト名が10文字以上",
+            multiplier: 1.6
+        },
+        {
+            text: "アーティスト名が5文字以下",
+            multiplier: 1.5
+        },
+        {
+            text: "アーティスト名が8文字以下",
+            multiplier: 1.5
+        },
+
+        {
+            text: "ソロアーティスト",
+            multiplier: 1.4
+        },
+        {
+            text: "男女混成グループ",
+            multiplier: 1.7
+        },
+        {
+            text: "バンド",
+            multiplier: 1.4
+        },
+
+        {
+            text: "アーティスト名に色が入っている",
+            multiplier: 1.7
+        },
+
+
+        /* -----------------------------------------
+           曲名頭文字
+        ----------------------------------------- */
+
+        {
+            text: "あ行から始まる曲名",
+            multiplier: 1.4
+        },
+        {
+            text: "か行から始まる曲名",
+            multiplier: 1.4
+        },
+        {
+            text: "さ行から始まる曲名",
+            multiplier: 1.4
+        },
+        {
+            text: "た行から始まる曲名",
+            multiplier: 1.4
+        },
+        {
+            text: "な行から始まる曲名",
+            multiplier: 1.4
+        },
+        {
+            text: "は行から始まる曲名",
+            multiplier: 1.4
+        },
+        {
+            text: "ま行から始まる曲名",
+            multiplier: 1.4
+        },
+        {
+            text: "や行から始まる曲名",
+            multiplier: 1.4
+        },
+        {
+            text: "ら行から始まる曲名",
+            multiplier: 1.4
+        },
+        {
+            text: "わ行から始まる曲名",
+            multiplier: 1.4
+        },
+
+
+        /* -----------------------------------------
+           曲名表記
+        ----------------------------------------- */
+
+        {
+            text: "曲名が漢字のみ",
+            multiplier: 1.6
+        },
+        {
+            text: "曲名がひらがなのみ",
+            multiplier: 1.6
+        },
+        {
+            text: "曲名がカタカナのみ",
+            multiplier: 1.6
+        },
+        {
+            text: "曲名がアルファベットのみ",
+            multiplier: 1.7
+        },
+
+        {
+            text: "曲名に漢字を含む",
+            multiplier: 1.4
+        },
+        {
+            text: "曲名に数字を含む",
+            multiplier: 1.5
+        },
+        {
+            text: "曲名にアルファベットを含む",
+            multiplier: 1.5
+        },
+
+        {
+            text: "曲名が5文字以上",
+            multiplier: 1.5
+        },
+        {
+            text: "曲名が10文字以上",
+            multiplier: 1.6
+        },
+        {
+            text: "曲名が5文字以下",
+            multiplier: 1.5
+        },
+        {
+            text: "曲名が8文字以下",
+            multiplier: 1.5
+        },
+
+        {
+            text: "曲名に「愛」が入っている",
+            multiplier: 1.6
+        },
+        {
+            text: "曲名に「の」が入っている",
+            multiplier: 1.4
+        },
+
+
+        /* -----------------------------------------
+           花
+        ----------------------------------------- */
+
+        {
+            text: "曲名に花の名前が入っている",
+            multiplier: 1.7
+        },
+
+
+        /* -----------------------------------------
+           年代
+        ----------------------------------------- */
+
+        {
+            text: "2000年代以前の曲",
+            multiplier: 1.4
+        },
+        {
+            text: "2010年代以降の曲",
+            multiplier: 1.4
+        },
+        {
+            text: "昭和の曲",
+            multiplier: 1.5
+        },
+        {
+            text: "平成の曲",
+            multiplier: 1.4
+        },
+        {
+            text: "令和の曲",
+            multiplier: 1.4
+        },
+        {
+            text: "平成生まれのアーティストの曲",
+            multiplier: 1.5
+        },
+
+
+        /* -----------------------------------------
+           タイアップ
+        ----------------------------------------- */
+
+        {
+            text: "アニメの曲",
+            multiplier: 1.4
+        },
+        {
+            text: "ドラマの曲",
+            multiplier: 1.4
+        },
+        {
+            text: "映画の曲",
+            multiplier: 1.5
+        },
+        {
+            text: "CMソング",
+            multiplier: 1.5
+        },
+
+
+        /* -----------------------------------------
+           歌詞
+        ----------------------------------------- */
+
+        {
+            text: "歌詞に食べ物が出てくる",
+            multiplier: 1.5
+        },
+        {
+            text: "歌詞に地名が出てくる",
+            multiplier: 1.5
+        },
+        {
+            text: "歌詞に乗り物が出てくる",
+            multiplier: 1.5
+        },
+
+
+        /* -----------------------------------------
+           カラオケ
+        ----------------------------------------- */
+
+        {
+            text: "カラオケランキングに入っている曲",
+            multiplier: 1.6
+        },
+
+
+        /* -----------------------------------------
+           前の人とのつながり
+        ----------------------------------------- */
+
+        {
+            text: "前の人の曲名としりとり",
+            multiplier: 1.8
+        },
+        {
+            text: "前の人のアーティスト名としりとり",
+            multiplier: 1.8
+        },
+
+
+        /* -----------------------------------------
+           自由
+        ----------------------------------------- */
+
+        {
+            text: "自由！",
+            multiplier: 0.9,
+            free: true
+        }
+
+    ]
 
 };
 
 
-// ============================================================
-// データ読み込み
-// ============================================================
+/* =========================================================
+   状態
+   ========================================================= */
 
-function loadConditions() {
-
-  const saved =
-    localStorage.getItem(STORAGE_KEY);
-
-  if (!saved) {
-
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(defaultConditions)
-    );
-
-    return structuredClone(
-      defaultConditions
-    );
-
-  }
-
-  try {
-
-    return JSON.parse(saved);
-
-  } catch (e) {
-
-    console.error(
-      "条件データ読み込みエラー",
-      e
-    );
-
-    return structuredClone(
-      defaultConditions
-    );
-
-  }
-
-}
+let currentMode = "easy";
+let currentCondition = null;
+let spinning = false;
 
 
-// ============================================================
-// 初期化
-// ============================================================
+/* =========================================================
+   DOM
+   ========================================================= */
 
-let conditions =
-  loadConditions();
+const conditionText =
+    document.getElementById("conditionText");
 
-let currentMode =
-  "easy";
+const condition =
+    document.getElementById("condition");
 
-let spinning =
-  false;
-
-
-const rouletteBox =
-  document.getElementById(
-    "rouletteBox"
-  );
-
-const conditionEl =
-  document.getElementById(
-    "condition"
-  );
-
-const difficultyEl =
-  document.getElementById(
-    "difficulty"
-  );
-
-const multiplierEl =
-  document.getElementById(
-    "multiplier"
-  );
+const roulette =
+    document.getElementById("roulette");
 
 const spinBtn =
-  document.getElementById(
-    "spinBtn"
-  );
+    document.getElementById("spinBtn");
+
+const difficulty =
+    document.getElementById("difficulty");
+
+const multiplier =
+    document.getElementById("multiplier");
+
+const history =
+    document.getElementById("history");
 
 
-// ============================================================
-// モード切替
-// ============================================================
+/* =========================================================
+   難易度切替
+   ========================================================= */
 
-document
-  .getElementById("easyBtn")
-  .addEventListener(
-    "click",
-    () => {
+document.querySelectorAll(".mode-btn").forEach(button => {
 
-      if (spinning) return;
+    button.addEventListener("click", () => {
 
-      currentMode = "easy";
+        if (spinning) return;
 
-      document
-        .getElementById("easyBtn")
-        .classList.add("active");
+        currentMode = button.dataset.mode;
 
-      document
-        .getElementById("hardBtn")
-        .classList.remove("active");
+        document
+            .querySelectorAll(".mode-btn")
+            .forEach(btn => {
+                btn.classList.remove("active");
+            });
 
-      difficultyEl.textContent =
-        "EASY";
+        button.classList.add("active");
 
-    }
-  );
+        difficulty.textContent =
+            currentMode.toUpperCase();
 
+        conditionText.textContent =
+            "ルーレットを回そう";
 
-document
-  .getElementById("hardBtn")
-  .addEventListener(
-    "click",
-    () => {
+        conditionText.classList.remove("free");
 
-      if (spinning) return;
+        currentCondition = null;
 
-      currentMode = "hard";
+        multiplier.textContent =
+            "×1.0";
 
-      document
-        .getElementById("hardBtn")
-        .classList.add("active");
+    });
 
-      document
-        .getElementById("easyBtn")
-        .classList.remove("active");
-
-      difficultyEl.textContent =
-        "HARD";
-
-    }
-  );
+});
 
 
-// ============================================================
-// ルーレット
-// ============================================================
+/* =========================================================
+   ルーレット
+   ========================================================= */
 
 function spinRoulette() {
 
-  if (spinning) return;
+    if (spinning) return;
 
+    spinning = true;
 
-  const list =
-    conditions[currentMode];
+    spinBtn.disabled = true;
 
+    /* アニメーション開始 */
+    roulette.classList.remove("result");
 
-  if (
-    !list ||
-    list.length === 0
-  ) {
+    condition.classList.remove("result");
 
-    conditionEl.textContent =
-      "条件がありません";
+    void roulette.offsetWidth;
 
-    return;
+    roulette.classList.add("spinning");
 
-  }
+    condition.classList.add("spinning");
 
+    const conditions =
+        conditionSets[currentMode];
 
-  spinning = true;
+    let counter = 0;
 
-  spinBtn.disabled = true;
+    let delay = 55;
 
+    function tick() {
 
-  /*
-    ここでアニメーション開始。
-  */
+        const randomIndex =
+            Math.floor(
+                Math.random() * conditions.length
+            );
 
-  rouletteBox.classList.add(
-    "spinning"
-  );
+        const temp =
+            conditions[randomIndex];
 
-  conditionEl.classList.remove(
-    "result"
-  );
+        conditionText.textContent =
+            temp.text;
 
-  conditionEl.classList.add(
-    "spinning"
-  );
+        conditionText.classList.toggle(
+            "free",
+            !!temp.free
+        );
 
+        counter++;
 
-  let count = 0;
+        if (counter < 22) {
 
+            delay += 8;
 
-  /*
-    22回固定ではなく、
-    前半は速く、後半で減速。
+            setTimeout(tick, delay);
 
-    これによって
-    「回り始める → 加速 → 減速 → 決定」
-    という感じになる。
-  */
+        } else {
 
-  const maxCount = 30;
+            finishRoulette();
 
-
-  function tick() {
-
-    const random =
-      list[
-        Math.floor(
-          Math.random() *
-          list.length
-        )
-      ];
-
-
-    conditionEl.textContent =
-      random.text;
-
-
-    count++;
-
-
-    if (
-      count >= maxCount
-    ) {
-
-      finishRoulette();
-
-      return;
+        }
 
     }
 
-
-    /*
-      進行率。
-
-      0   → 高速
-      0.5 → 高速
-      1   → ゆっくり
-    */
-
-    const progress =
-      count / maxCount;
-
-
-    /*
-      後半ほど大きく減速。
-    */
-
-    const delay =
-      35 +
-      Math.pow(
-        progress,
-        3.2
-      ) * 330;
-
-
-    setTimeout(
-      tick,
-      delay
-    );
-
-  }
-
-
-  tick();
+    tick();
 
 }
 
 
-// ============================================================
-// 決定
-// ============================================================
+/* =========================================================
+   結果確定
+   ========================================================= */
 
 function finishRoulette() {
 
-  const list =
-    conditions[currentMode];
+    const conditions =
+        conditionSets[currentMode];
 
-
-  const selected =
-    list[
-      Math.floor(
-        Math.random() *
-        list.length
-      )
-    ];
-
-
-  conditionEl.textContent =
-    selected.text;
-
-
-  multiplierEl.textContent =
-    "×" +
-    Number(
-      selected.multiplier
-    ).toFixed(1);
-
-
-  /*
-    回転アニメーション終了
-  */
-
-  rouletteBox.classList.remove(
-    "spinning"
-  );
-
-  conditionEl.classList.remove(
-    "spinning"
-  );
-
-
-  /*
-    一度 reflow を起こしてから
-    決定アニメーションを発火。
-  */
-
-  void conditionEl.offsetWidth;
-
-  conditionEl.classList.add(
-    "result"
-  );
-
-
-  /*
-    少し遅らせて履歴追加。
-
-    画面上で結果が決まった瞬間と
-    履歴追加が完全に重ならないようにする。
-  */
-
-  addHistory(
-    selected,
-    currentMode
-  );
-
-
-  spinning = false;
-
-  spinBtn.disabled = false;
-
-
-  /*
-    アニメーション用クラスを後で消す。
-  */
-
-  setTimeout(
-    () => {
-
-      conditionEl.classList.remove(
-        "result"
-      );
-
-    },
-    600
-  );
-
-}
-
-
-// ============================================================
-// 履歴
-// ============================================================
-
-function addHistory(
-  condition,
-  mode
-) {
-
-  const history =
-    JSON.parse(
-      localStorage.getItem(
-        "karaokeBowlingHistory"
-      ) || "[]"
-    );
-
-
-  history.unshift({
-
-    text:
-      condition.text,
-
-    multiplier:
-      condition.multiplier,
-
-    mode:
-      mode,
-
-    category:
-      condition.category,
-
-    time:
-      new Date().toLocaleTimeString(
-        "ja-JP",
-        {
-          hour: "2-digit",
-          minute: "2-digit"
-        }
-      )
-
-  });
-
-
-  localStorage.setItem(
-    "karaokeBowlingHistory",
-    JSON.stringify(history)
-  );
-
-
-  renderHistory();
-
-}
-
-
-// ============================================================
-// 履歴表示
-// ============================================================
-
-function renderHistory() {
-
-  const list =
-    JSON.parse(
-      localStorage.getItem(
-        "karaokeBowlingHistory"
-      ) || "[]"
-    );
-
-
-  const historyList =
-    document.getElementById(
-      "historyList"
-    );
-
-
-  historyList.innerHTML = "";
-
-
-  list.forEach(
-    item => {
-
-      const div =
-        document.createElement(
-          "div"
+    const resultIndex =
+        Math.floor(
+            Math.random() * conditions.length
         );
 
+    currentCondition =
+        conditions[resultIndex];
 
-      div.className =
-        "historyItem";
+    conditionText.textContent =
+        currentCondition.text;
+
+    conditionText.classList.toggle(
+        "free",
+        !!currentCondition.free
+    );
+
+    multiplier.textContent =
+        "×" +
+        currentCondition.multiplier.toFixed(1);
+
+    /* 回転終了 */
+    roulette.classList.remove("spinning");
+
+    condition.classList.remove("spinning");
+
+    /* 結果演出 */
+    void roulette.offsetWidth;
+
+    roulette.classList.add("result");
+    condition.classList.add("result");
+
+    addHistory(currentCondition);
+
+    spinning = false;
+
+    spinBtn.disabled = false;
+
+    /* 演出クラスを後から外す */
+    setTimeout(() => {
+
+        roulette.classList.remove("result");
+        condition.classList.remove("result");
+
+    }, 600);
+
+}
 
 
-      div.innerHTML = `
+/* =========================================================
+   履歴
+   ========================================================= */
 
+function addHistory(condition) {
+
+    const empty =
+        history.querySelector(".empty");
+
+    if (empty) {
+        history.innerHTML = "";
+    }
+
+    const item =
+        document.createElement("div");
+
+    item.className =
+        "history-item";
+
+    const number =
+        history.children.length + 1;
+
+    item.innerHTML = `
         <div>
-          ${escapeHtml(item.text)}
-          ×${Number(
-            item.multiplier
-          ).toFixed(1)}
+            <div class="history-condition">
+                ${number}. ${escapeHtml(condition.text)}
+            </div>
         </div>
 
-        <div class="historyMeta">
-
-          ${item.mode.toUpperCase()}
-          ／
-          ${escapeHtml(
-            item.category || ""
-          )}
-          ／
-          ${item.time}
-
+        <div class="history-meta">
+            ×${condition.multiplier.toFixed(1)}
         </div>
+    `;
 
-      `;
-
-
-      historyList.appendChild(
-        div
-      );
-
-    }
-  );
+    history.prepend(item);
 
 }
 
 
-// ============================================================
-// 履歴リセット
-// ============================================================
+/* =========================================================
+   履歴リセット
+   ========================================================= */
 
-document
-  .getElementById(
-    "resetHistoryBtn"
-  )
-  .addEventListener(
-    "click",
-    () => {
+function resetHistory() {
 
-      if (
-        confirm(
-          "履歴をすべて削除しますか？"
-        )
-      ) {
+    history.innerHTML = `
+        <div class="empty">
+            まだ条件はありません。
+        </div>
+    `;
 
-        localStorage.removeItem(
-          "karaokeBowlingHistory"
-        );
+    conditionText.textContent =
+        "ルーレットを回そう";
 
-        renderHistory();
+    conditionText.classList.remove("free");
 
-      }
+    multiplier.textContent =
+        "×1.0";
 
-    }
-  );
-
-
-// ============================================================
-// HTMLエスケープ
-// ============================================================
-
-function escapeHtml(str) {
-
-  return String(str)
-    .replaceAll(
-      "&",
-      "&amp;"
-    )
-    .replaceAll(
-      "<",
-      "&lt;"
-    )
-    .replaceAll(
-      ">",
-      "&gt;"
-    )
-    .replaceAll(
-      '"',
-      "&quot;"
-    )
-    .replaceAll(
-      "'",
-      "&#039;"
-    );
+    currentCondition = null;
 
 }
 
 
-// ============================================================
-// 起動
-// ============================================================
+/* =========================================================
+   HTMLエスケープ
+   ========================================================= */
 
-spinBtn.addEventListener(
-  "click",
-  spinRoulette
-);
+function escapeHtml(text) {
 
+    const div =
+        document.createElement("div");
 
-renderHistory();
+    div.textContent =
+        text;
+
+    return div.innerHTML;
+
+}
 
 </script>
 
