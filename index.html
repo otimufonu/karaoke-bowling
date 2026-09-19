@@ -506,21 +506,83 @@
       font-size: 11px;
     }
 
-    /* ルーレットモーダル専用調整 */
-    .roulette-modal-content {
-      max-width: 600px;
-      height: 85vh;
-      padding: 8px;
-      display: flex;
-      flex-direction: column;
-    }
+   /* ========================================
+   ルーレット・ポップアップ
+   ======================================== */
 
-    .roulette-iframe {
-      width: 100%;
-      flex: 1;
-      border: none;
-      border-radius: 6px;
-    }
+.roulette-overlay {
+  position: fixed;
+  inset: 0;
+
+  background: rgba(0, 0, 0, 0.45);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  z-index: 2000;
+
+  animation: rouletteOverlayIn 0.15s ease-out;
+}
+
+
+/* ポップアップ本体 */
+.roulette-popup {
+  width: min(85vw, 560px);
+  height: min(42vh, 330px);
+
+  background: #3d3d3d;
+
+  border-radius: 38px;
+
+  padding: 34px;
+
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.45);
+
+  animation: roulettePopupIn 0.18s ease-out;
+}
+
+
+/* ルーレット本体 */
+.roulette-frame {
+  width: 100%;
+  height: 100%;
+
+  border: none;
+
+  border-radius: 22px;
+
+  background: #111;
+
+  display: block;
+}
+
+
+/* 背景の登場 */
+@keyframes rouletteOverlayIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+
+/* ポップアップの登場 */
+@keyframes roulettePopupIn {
+  from {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
   </style>
 </head>
 <body>
@@ -729,16 +791,20 @@
     </div>
   </div>
 
-  <!-- 5. ルーレットモーダル画面 -->
-  <div id="rouletteModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content roulette-modal-content">
-      <div class="modal-header" style="margin-bottom: 6px;">
-        <h2>🎰 ルーレット</h2>
-        <button class="btn-close" onclick="closeRouletteModal()">閉じる</button>
-      </div>
-      <iframe id="rouletteFrame" class="roulette-iframe" src=""></iframe>
-    </div>
+ <!-- 5. ルーレットポップアップ -->
+<div id="rouletteModal" class="roulette-overlay" style="display: none;">
+
+  <div class="roulette-popup">
+
+    <iframe
+      id="rouletteFrame"
+      class="roulette-frame"
+      src="">
+    </iframe>
+
   </div>
+
+</div>
 
   <script>
     const STORAGE_KEY = 'bowling_score_app_data';
@@ -2297,19 +2363,44 @@
       ).style.display = 'none';
     }
 
-    /* ルーレットモーダルの操作関数 */
-    function openRouletteModal() {
-      const frame = document.getElementById('rouletteFrame');
-      // 開く際にroulette.htmlを読み込み
-      if (!frame.src || frame.src === 'about:blank') {
-        frame.src = 'roulette.html';
-      }
-      document.getElementById('rouletteModal').style.display = 'flex';
-    }
+    /* ========================================
+   ルーレットポップアップ
+   ======================================== */
 
-    function closeRouletteModal() {
-      document.getElementById('rouletteModal').style.display = 'none';
-    }
+function openRouletteModal() {
+
+  const modal =
+    document.getElementById('rouletteModal');
+
+  const frame =
+    document.getElementById('rouletteFrame');
+
+
+  /*
+   * roulette.html は初回だけ読み込む
+   *
+   * dataset.loaded を使うことで、
+   * iframeのsrc判定に頼らない。
+   */
+  if (frame.dataset.loaded !== 'true') {
+
+    frame.src = 'roulette.html';
+
+    frame.dataset.loaded = 'true';
+  }
+
+
+  modal.style.display = 'flex';
+}
+
+
+function closeRouletteModal() {
+
+  document.getElementById(
+    'rouletteModal'
+  ).style.display = 'none';
+
+}
 
     function resetGame() {
       if (
