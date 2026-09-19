@@ -25,23 +25,51 @@ body {
   overflow: hidden;
 }
 
-/* モーダル起動用ボタン */
-.open-modal-btn {
-  padding: 18px 36px;
-  font-size: 20px;
+/* トップメニュー領域（中央縦並び） */
+.top-menu-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+  width: min(320px, 85%);
+}
+
+/* 共通ボタン基本スタイル */
+.menu-btn {
+  width: 100%;
+  padding: 18px 24px;
+  font-size: 18px;
   font-weight: 900;
+  text-align: center;
+  text-decoration: none;
+  border-radius: 50px;
+  cursor: pointer;
+  letter-spacing: 2px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menu-btn:active {
+  transform: scale(0.95);
+}
+
+/* モーダル起動用ボタン（ゴールド） */
+.open-modal-btn {
   color: #000;
   background: linear-gradient(135deg, #ffe066 0%, #f5af19 50%, #e65c00 100%);
   border: 2px solid #fff;
-  border-radius: 50px;
-  cursor: pointer;
   box-shadow: 0 0 20px rgba(245, 175, 25, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.8);
-  letter-spacing: 2px;
-  transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.open-modal-btn:active {
-  transform: scale(0.95);
+/* スコア表に戻るボタン（プラチナシルバー） */
+.back-score-btn {
+  color: #fff;
+  background: linear-gradient(135deg, #8a9ba8 0%, #485563 50%, #29323c 100%);
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 0 15px rgba(226, 232, 240, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.6);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
 /* モーダル背景（オーバーレイ） */
@@ -154,7 +182,6 @@ h1 {
   justify-content: center;
 }
 
-/* 上下の立体グラデーションシャドウ（ドラム感を出す） */
 .slot-container::before,
 .slot-container::after {
   content: "";
@@ -174,7 +201,6 @@ h1 {
   background: linear-gradient(to top, rgba(10, 2, 18, 0.95) 0%, rgba(10, 2, 18, 0) 100%);
 }
 
-/* 中央配当ライン（ペイライン） */
 .payline {
   position: absolute;
   top: 50%;
@@ -190,7 +216,6 @@ h1 {
   pointer-events: none;
 }
 
-/* リール本体 */
 .reel-viewport {
   width: 100%;
   height: 90px;
@@ -223,12 +248,10 @@ h1 {
   word-break: break-all;
 }
 
-/* ブラー（高速回転用） */
 .spinning .reel-strip {
   filter: blur(2px);
 }
 
-/* 当選フラッシュ演出 */
 @keyframes winGlow {
   0%, 100% { border-color: #ffcc00; box-shadow: 0 0 20px rgba(255, 204, 0, 0.4); }
   50% { border-color: #ff0055; box-shadow: 0 0 40px #ff0055, inset 0 0 25px #ff0055; }
@@ -239,7 +262,7 @@ h1 {
 }
 
 /* ----------------------------------
-   SPIN ボタン（大粒・キラキラ）
+   SPIN ボタン
 ---------------------------------- */
 .spin-btn {
   width: 100%;
@@ -360,8 +383,11 @@ h1 {
 
 <body>
 
-<!-- モーダル起動用ボタン -->
-<button id="openModalBtn" class="open-modal-btn">スロットを開く</button>
+<!-- 最初開いた時のボタンコンテナ -->
+<div class="top-menu-container">
+  <button id="openModalBtn" class="menu-btn open-modal-btn">スロットを開く</button>
+  <a href="index.html" class="menu-btn back-score-btn">スコア表に戻る</a>
+</div>
 
 <!-- モーダルオーバーレイ -->
 <div id="modalOverlay" class="modal-overlay">
@@ -411,9 +437,7 @@ h1 {
 <script>
 const STORAGE_KEY = "karaokeBowlingConditions_v1";
 
-// ============================================================
-// 初期条件データ (互換性維持のためeasy/hard保持)
-// ============================================================
+// 初期条件データ
 const defaultConditions = {
   easy: [{ category: "その他", text: "自由！", multiplier: 1.0 }],
   hard: [
@@ -487,7 +511,7 @@ closeModalBtn.addEventListener("click", closeModal);
 modalOverlay.addEventListener("click", (e) => { if (e.target === modalOverlay) closeModal(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && modalOverlay.classList.contains("active")) closeModal(); });
 
-// データ読み込み（hardおよびeasy統合の全条件を抽出）
+// データ読み込み
 function loadConditions() {
   const saved = localStorage.getItem(STORAGE_KEY);
   let data = defaultConditions;
@@ -497,7 +521,6 @@ function loadConditions() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultConditions));
   }
   
-  // easyとhardを結合して全条件を取得（重複を避けるかそのまま使用）
   const allList = [...(data.hard || []), ...(data.easy || [])];
   return allList.length > 0 ? allList : defaultConditions.hard;
 }
@@ -509,11 +532,9 @@ const slotContainer = document.getElementById("slotContainer");
 const reelStrip = document.getElementById("reelStrip");
 const spinBtn = document.getElementById("spinBtn");
 
-const ITEM_HEIGHT = 90; // リール項目の高さ(px)
+const ITEM_HEIGHT = 90;
 
-// ============================================================
-// 縦回転スロット アニメーション処理
-// ============================================================
+// スロットアニメーション
 function spinSlot() {
   if (spinning) return;
   
@@ -525,22 +546,18 @@ function spinSlot() {
   slotContainer.classList.remove("win-flash");
   slotContainer.classList.add("spinning");
 
-  // 当選アイテムを決定
   const selectedIndex = Math.floor(Math.random() * conditions.length);
   const selectedItem = conditions[selectedIndex];
 
-  // スロットリール用ダミー配列構築（30回転分ランダムに敷き詰める）
-  const totalSteps = 35; // 回転数
+  const totalSteps = 35;
   const stripItems = [];
 
   for (let i = 0; i < totalSteps; i++) {
     const randomCond = conditions[Math.floor(Math.random() * conditions.length)];
     stripItems.push(randomCond.text);
   }
-  // 最後に当選項目をセット
   stripItems.push(selectedItem.text);
 
-  // リールDOM要素作成
   reelStrip.innerHTML = "";
   stripItems.forEach(text => {
     const div = document.createElement("div");
@@ -549,20 +566,16 @@ function spinSlot() {
     reelStrip.appendChild(div);
   });
 
-  // 初期位置リセット
   reelStrip.style.transition = "none";
   reelStrip.style.transform = `translateY(0px)`;
 
-  // イージング付き高速縦回転アニメーション
   const totalDistance = totalSteps * ITEM_HEIGHT;
-  const duration = 2800; // 回転時間 (ms)
+  const duration = 2800;
   const startTime = performance.now();
 
   function animate(currentTime) {
     const elapsed = currentTime - startTime;
     const progress = Math.min(elapsed / duration, 1);
-
-    // easeOutQuart（後半一気に減速する慣性演出）
     const easeProgress = 1 - Math.pow(1 - progress, 4);
     const currentY = easeProgress * totalDistance;
 
@@ -575,23 +588,19 @@ function spinSlot() {
     }
   }
 
-  // 微小ディレイ後にアニメーション開始
   setTimeout(() => {
     requestAnimationFrame(animate);
   }, 50);
 }
 
-// 停止バウンド＆当選フラッシュ処理
 function finishSpin(selectedItem) {
   slotContainer.classList.remove("spinning");
   
-  // ピタッと止まった時のバウンド演出 (CSS transition)
   const finalDistance = (reelStrip.children.length - 1) * ITEM_HEIGHT;
   reelStrip.style.transition = "transform 0.25s cubic-bezier(0.175, 0.885, 0.45, 1.3)";
   reelStrip.style.transform = `translateY(-${finalDistance}px)`;
 
   setTimeout(() => {
-    // 当選フラッシュ開始
     slotContainer.classList.add("win-flash");
     addHistory(selectedItem);
     spinning = false;
@@ -599,9 +608,7 @@ function finishSpin(selectedItem) {
   }, 250);
 }
 
-// ============================================================
-// 履歴機能（直近3件のみシンプルに保持）
-// ============================================================
+// 履歴機能
 function addHistory(condition) {
   const history = JSON.parse(localStorage.getItem("karaokeBowlingHistory") || "[]");
   history.unshift({
@@ -624,7 +631,6 @@ function renderHistory() {
     return;
   }
 
-  // 画面の圧迫を防ぐため直近3件を表示
   history.slice(0, 3).forEach(item => {
     const div = document.createElement("div");
     div.className = "history-item";
