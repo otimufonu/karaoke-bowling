@@ -1899,6 +1899,31 @@
       }
     }
 
+    // 内訳モーダルの開閉関数
+    function openDetailModal() {
+      const container = document.getElementById('modalBodyContainer');
+      container.innerHTML = generateDetailHTML(false);
+      document.getElementById('detailModal').style.display = 'flex';
+    }
+
+    function closeDetailModal() {
+      document.getElementById('detailModal').style.display = 'none';
+    }
+
+    // スコアクリア関数
+    function resetGame() {
+      if (confirm('現在のスコアデータを全てクリアしてリセットしますか？')) {
+        for (let t = 0; t < gameConfig.teamCount; t++) {
+          for (let s = 0; s < gameConfig.songCount; s++) {
+            gameState[t][s] = { raw: null, avg: null };
+          }
+        }
+        recalculateAll();
+        selectCell(0, 0);
+        saveToLocalStorage();
+      }
+    }
+
     // 内訳HTML生成
     function generateDetailHTML(isPdf = false) {
       let html = '';
@@ -2120,39 +2145,19 @@
                 <td style="border:1px solid ${isPdf ? '#ccc' : '#2a364f'}; padding:${cellPadding}; font-weight:bold;">${totalRaw.toFixed(1)} 点</td>
                 <td style="border:1px solid ${isPdf ? '#ccc' : '#2a364f'}; padding:${cellPadding}; font-weight:bold;">${totalAvg.toFixed(1)} 点</td>
                 <td style="border:1px solid ${isPdf ? '#ccc' : '#2a364f'}; padding:${cellPadding}; font-weight:bold;">${diffSum > 0 ? '+' : ''}${diffSum.toFixed(1)}</td>
-                <td style="border:1px solid ${isPdf ? '#ccc' : '#2a364f'}; padding:${cellPadding};">-</td>
-                <td style="border:1px solid ${isPdf ? '#ccc' : '#2a364f'}; padding:${cellPadding};">-</td>
-                <td style="border:1px solid ${isPdf ? '#ccc' : '#2a364f'}; padding:${cellPadding};">-</td>
-                <td style="border:1px solid ${isPdf ? '#ccc' : '#2a364f'}; padding:${cellPadding}; color:${isPdf ? '#d35400' : '#facc15'}; font-weight:bold;">${totalFinalPoint} pt</td>
+                <td style="border:1px solid ${isPdf ? '#ccc' : '#2a364f'}; padding:${cellPadding}; font-weight:bold;">-</td>
+                <td style="border:1px solid ${isPdf ? '#ccc' : '#2a364f'}; padding:${cellPadding}; font-weight:bold;">-</td>
+                <td style="border:1px solid ${isPdf ? '#ccc' : '#2a364f'}; padding:${cellPadding}; font-weight:bold;">-</td>
+                <td style="border:1px solid ${isPdf ? '#ccc' : '#2a364f'}; padding:${cellPadding}; font-weight:bold; color:${isPdf ? '#d35400' : '#facc15'};">${totalFinalPoint} pt</td>
               </tr>
             </tfoot>
           `;
         }
 
-        html += `
-            </tbody>
-          </table>
-        `;
+        html += `</table>`;
       }
 
       return html;
-    }
-
-    function openDetailModal() {
-      const container = document.getElementById('modalBodyContainer');
-      container.innerHTML = generateDetailHTML(false);
-      document.getElementById('detailModal').style.display = 'flex';
-    }
-
-    function closeDetailModal() {
-      document.getElementById('detailModal').style.display = 'none';
-    }
-
-    function resetGame() {
-      if (confirm('スコアデータをクリアして初期状態に戻しますか？')) {
-        localStorage.removeItem(STORAGE_KEY);
-        location.reload();
-      }
     }
   </script>
 </body>
