@@ -277,6 +277,43 @@
       flex: 0 0 auto;
     }
 
+    /* ルーレットボタン設定 */
+    .roulette-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 6px 0;
+      flex: 0 0 auto;
+    }
+
+    .btn-roulette {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ff4d4f, #d9363e);
+      color: white;
+      border: 2px solid #ffffff;
+      font-weight: bold;
+      font-size: 11px;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(217, 54, 62, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      line-height: 1.2;
+      transition: transform 0.1s, box-shadow 0.1s, background 0.2s;
+    }
+
+    .btn-roulette:hover {
+      background: linear-gradient(135deg, #ff7875, #ff4d4f);
+    }
+
+    .btn-roulette:active {
+      transform: scale(0.95);
+      box-shadow: 0 2px 4px rgba(217, 54, 62, 0.4);
+    }
+
     /* 残り所要時間 */
     .remaining-time {
       font-size: 11px;
@@ -628,6 +665,11 @@
 
       <div class="note">
         ※ 左上:素点 / 右上:判定記号・計算点 / 下:累計。<b>マス目クリックで編集</b>
+      </div>
+
+      <!-- ルーレットを回すボタン -->
+      <div class="roulette-container">
+        <button class="btn-roulette" onclick="location.href='roulette.html'">ルーレットを<br>回す</button>
       </div>
 
       <!-- 残り所要時間表示 -->
