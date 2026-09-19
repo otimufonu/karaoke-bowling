@@ -12,6 +12,7 @@
 
 body {
   margin: 0;
+  padding: 40px 20px;
   background: #111;
   color: #fff;
   font-family:
@@ -21,18 +22,104 @@ body {
     "Yu Gothic",
     "Hiragino Kaku Gothic ProN",
     sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
 }
 
-.container {
-  width: min(700px, 94%);
-  margin: 0 auto;
-  padding: 24px 0 50px;
+/* モーダル起動用ボタン */
+.open-modal-btn {
+  padding: 16px 32px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #111;
+  background: #fff;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.open-modal-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3);
+}
+
+/* モーダル背景（オーバーレイ） */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* モーダル本体 */
+.modal-content {
+  position: relative;
+  width: min(600px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #181818;
+  border: 1px solid #333;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+  transform: scale(0.92);
+  transition: transform 0.3s ease;
+}
+
+.modal-overlay.active .modal-content {
+  transform: scale(1);
+}
+
+/* 閉じるボタン (×) */
+.close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #2a2a2a;
+  border: none;
+  color: #aaa;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s;
+  z-index: 10;
+}
+
+.close-btn:hover {
+  background: #444;
+  color: #fff;
 }
 
 h1 {
   text-align: center;
-  font-size: 24px;
-  margin: 10px 0 24px;
+  font-size: 22px;
+  margin: 5px 0 20px;
+  padding-right: 20px;
 }
 
 .mode {
@@ -43,12 +130,12 @@ h1 {
 
 .mode button {
   flex: 1;
-  padding: 14px;
+  padding: 12px;
   border: 1px solid #555;
   border-radius: 10px;
   background: #222;
   color: #aaa;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: bold;
 }
 
@@ -58,20 +145,20 @@ h1 {
 }
 
 .roulette {
-  min-height: 190px;
+  min-height: 170px;
   border: 2px solid #444;
-  border-radius: 18px;
-  background: #181818;
+  border-radius: 16px;
+  background: #111;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 25px;
+  padding: 20px;
   margin-bottom: 18px;
 }
 
 .condition {
-  font-size: clamp(24px, 6vw, 42px);
+  font-size: clamp(20px, 5vw, 36px);
   font-weight: bold;
   line-height: 1.35;
 }
@@ -82,12 +169,12 @@ button {
 
 .spin {
   width: 100%;
-  padding: 18px;
+  padding: 16px;
   border: none;
   border-radius: 12px;
   background: #fff;
   color: #111;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: bold;
 }
 
@@ -98,8 +185,8 @@ button {
 
 .info {
   margin-top: 18px;
-  padding: 16px;
-  background: #1b1b1b;
+  padding: 14px;
+  background: #222;
   border-radius: 12px;
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -108,80 +195,81 @@ button {
 
 .infoBox {
   text-align: center;
-  background: #242424;
+  background: #181818;
   border-radius: 10px;
-  padding: 12px;
+  padding: 10px;
 }
 
 .infoLabel {
-  font-size: 12px;
+  font-size: 11px;
   color: #999;
 }
 
 .infoValue {
-  margin-top: 5px;
-  font-size: 22px;
+  margin-top: 4px;
+  font-size: 20px;
   font-weight: bold;
 }
 
 .inputs {
-  margin-top: 20px;
+  margin-top: 18px;
 }
 
 .inputs label {
   display: block;
   margin-bottom: 6px;
   color: #aaa;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .inputs input {
   width: 100%;
-  padding: 13px;
+  padding: 11px;
   border: 1px solid #444;
   border-radius: 8px;
-  background: #1c1c1c;
+  background: #222;
   color: #fff;
-  font-size: 16px;
-  margin-bottom: 12px;
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+
+.subButtons {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.subButtons button {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #444;
+  border-radius: 8px;
+  background: #222;
+  color: #ccc;
+  font-size: 13px;
 }
 
 .history {
-  margin-top: 24px;
+  margin-top: 20px;
 }
 
 .history h2 {
-  font-size: 17px;
+  font-size: 16px;
   margin-bottom: 10px;
 }
 
 .historyItem {
   padding: 10px 12px;
-  background: #1b1b1b;
+  background: #222;
   border-radius: 8px;
   margin-bottom: 7px;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .historyMeta {
   color: #888;
   font-size: 11px;
   margin-top: 3px;
-}
-
-.subButtons {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.subButtons button {
-  flex: 1;
-  padding: 11px;
-  border: 1px solid #444;
-  border-radius: 8px;
-  background: #222;
-  color: #ccc;
 }
 
 a {
@@ -193,79 +281,91 @@ a {
 
 <body>
 
-<div class="container">
+<!-- モーダル起動用ボタン -->
+<button id="openModalBtn" class="open-modal-btn">条件ルーレットを開く</button>
 
-  <h1>カラオケボウリング<br>条件ルーレット</h1>
+<!-- モーダルオーバーレイ -->
+<div id="modalOverlay" class="modal-overlay">
 
-  <div class="mode">
-    <button id="easyBtn" class="active">EASY</button>
-    <button id="hardBtn">HARD</button>
-  </div>
+  <!-- モーダルコンテンツ -->
+  <div class="modal-content">
 
-  <div class="roulette">
-    <div id="condition" class="condition">READY?</div>
-  </div>
+    <!-- 閉じるボタン (×) -->
+    <button id="closeModalBtn" class="close-btn" aria-label="閉じる">&times;</button>
 
-  <button id="spinBtn" class="spin">ルーレットを回す</button>
+    <h1>カラオケボウリング<br>条件ルーレット</h1>
 
-  <div class="info">
-    <div class="infoBox">
-      <div class="infoLabel">難易度</div>
-      <div id="difficulty" class="infoValue">EASY</div>
+    <div class="mode">
+      <button id="easyBtn" class="active">EASY</button>
+      <button id="hardBtn">HARD</button>
     </div>
 
-    <div class="infoBox">
-      <div class="infoLabel">倍率</div>
-      <div id="multiplier" class="infoValue">×1.0</div>
+    <div class="roulette">
+      <div id="condition" class="condition">READY?</div>
     </div>
-  </div>
 
-  <div class="inputs">
+    <button id="spinBtn" class="spin">ルーレットを回す</button>
 
-    <label for="previousSong">
-      前の人の曲名
-    </label>
-    <input
-      id="previousSong"
-      type="text"
-      placeholder="しりとり条件で使用"
-    >
+    <div class="info">
+      <div class="infoBox">
+        <div class="infoLabel">難易度</div>
+        <div id="difficulty" class="infoValue">EASY</div>
+      </div>
 
-    <label for="previousArtist">
-      前の人のアーティスト名
-    </label>
-    <input
-      id="previousArtist"
-      type="text"
-      placeholder="アーティストしりとり条件で使用"
-    >
+      <div class="infoBox">
+        <div class="infoLabel">倍率</div>
+        <div id="multiplier" class="infoValue">×1.0</div>
+      </div>
+    </div>
 
-  </div>
+    <div class="inputs">
 
-  <div class="subButtons">
-    <a href="conditions.html" style="flex:1;">
-      <button style="width:100%;">条件を編集</button>
-    </a>
-  </div>
+      <label for="previousSong">
+        前の人の曲名
+      </label>
+      <input
+        id="previousSong"
+        type="text"
+        placeholder="しりとり条件で使用"
+      >
 
-  <div class="history">
-    <h2>履歴</h2>
-    <div id="historyList"></div>
+      <label for="previousArtist">
+        前の人のアーティスト名
+      </label>
+      <input
+        id="previousArtist"
+        type="text"
+        placeholder="アーティストしりとり条件で使用"
+      >
 
-    <button
-      id="resetHistoryBtn"
-      style="
-        width:100%;
-        margin-top:10px;
-        padding:10px;
-        border:1px solid #444;
-        border-radius:8px;
-        background:#222;
-        color:#aaa;
-      "
-    >
-      履歴をリセット
-    </button>
+    </div>
+
+    <div class="subButtons">
+      <a href="conditions.html" style="flex:1;">
+        <button style="width:100%;">条件を編集</button>
+      </a>
+    </div>
+
+    <div class="history">
+      <h2>履歴</h2>
+      <div id="historyList"></div>
+
+      <button
+        id="resetHistoryBtn"
+        style="
+          width:100%;
+          margin-top:10px;
+          padding:10px;
+          border:1px solid #444;
+          border-radius:8px;
+          background:#222;
+          color:#aaa;
+        "
+      >
+        履歴をリセット
+      </button>
+    </div>
+
   </div>
 
 </div>
@@ -714,6 +814,42 @@ const defaultConditions = {
   ]
 
 };
+
+
+// ============================================================
+// モーダル制御
+// ============================================================
+
+const openModalBtn = document.getElementById("openModalBtn");
+const closeModalBtn = document.getElementById("closeModalBtn");
+const modalOverlay = document.getElementById("modalOverlay");
+
+function openModal() {
+  modalOverlay.classList.add("active");
+  document.body.style.overflow = "hidden"; // 背面のスクロールを禁止
+}
+
+function closeModal() {
+  modalOverlay.classList.remove("active");
+  document.body.style.overflow = ""; // スクロール解除
+}
+
+openModalBtn.addEventListener("click", openModal);
+closeModalBtn.addEventListener("click", closeModal);
+
+// 背景領域のクリックで閉じる
+modalOverlay.addEventListener("click", (e) => {
+  if (e.target === modalOverlay) {
+    closeModal();
+  }
+});
+
+// ESCキーで閉じる
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && modalOverlay.classList.contains("active")) {
+    closeModal();
+  }
+});
 
 
 // ============================================================
