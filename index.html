@@ -2377,14 +2377,14 @@ function openRouletteModal() {
 
 
   /*
-   * roulette.html は初回だけ読み込む
+   * ro.html は初回だけ読み込む
    *
    * dataset.loaded を使うことで、
    * iframeのsrc判定に頼らない。
    */
   if (frame.dataset.loaded !== 'true') {
 
-    frame.src = 'roulette.html';
+    frame.src = 'ro.html';
 
     frame.dataset.loaded = 'true';
   }
