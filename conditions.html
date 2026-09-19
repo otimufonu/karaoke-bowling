@@ -1,0 +1,1743 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>カラオケボウリング｜条件管理</title>
+
+<style>
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #111;
+  color: #fff;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Helvetica Neue",
+    "Yu Gothic",
+    "Hiragino Kaku Gothic ProN",
+    sans-serif;
+}
+
+.container {
+  width: min(800px, 94%);
+  margin: auto;
+  padding: 20px 0 60px;
+}
+
+h1 {
+  font-size: 24px;
+  margin: 10px 0 20px;
+}
+
+.mode {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.mode button {
+  flex: 1;
+  padding: 13px;
+  border: 1px solid #444;
+  border-radius: 10px;
+  background: #222;
+  color: #aaa;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.mode button.active {
+  background: #fff;
+  color: #111;
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.toolbar button {
+  flex: 1;
+  padding: 13px 8px;
+  border: 1px solid #555;
+  border-radius: 9px;
+  background: #222;
+  color: #fff;
+  font-weight: bold;
+}
+
+.toolbar button.active {
+  background: #fff;
+  color: #111;
+}
+
+.toolbar button.deleteMode.active {
+  background: #c33;
+  color: #fff;
+}
+
+.folder {
+  border: 1px solid #333;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  background: #181818;
+}
+
+.folderHeader {
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  background: #202020;
+}
+
+.folderTitle {
+  font-size: 17px;
+  font-weight: bold;
+}
+
+.folderCount {
+  color: #888;
+  font-size: 13px;
+}
+
+.folderArrow {
+  color: #888;
+  margin-left: 10px;
+}
+
+.folderBody {
+  display: none;
+  padding: 8px;
+}
+
+.folder.open .folderBody {
+  display: block;
+}
+
+.conditionItem {
+  padding: 13px;
+  margin-bottom: 6px;
+  border-radius: 8px;
+  background: #242424;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.conditionItem:last-child {
+  margin-bottom: 0;
+}
+
+.conditionItem:hover {
+  background: #2d2d2d;
+}
+
+.conditionItem.selected {
+  border-color: #fff;
+  background: #333;
+}
+
+.conditionText {
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.conditionMeta {
+  margin-top: 5px;
+  color: #888;
+  font-size: 12px;
+}
+
+.empty {
+  padding: 20px;
+  color: #777;
+  text-align: center;
+}
+
+.back {
+  display: block;
+  margin-top: 20px;
+  padding: 13px;
+  border: 1px solid #444;
+  border-radius: 9px;
+  text-align: center;
+  color: #ccc;
+  text-decoration: none;
+  background: #1c1c1c;
+}
+
+.modalBg {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.72);
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+}
+
+.modalBg.show {
+  display: flex;
+}
+
+.modal {
+  width: min(520px, 100%);
+  background: #202020;
+  border-radius: 15px;
+  padding: 20px;
+}
+
+.modal h2 {
+  margin-top: 0;
+  font-size: 20px;
+}
+
+.modal label {
+  display: block;
+  margin: 15px 0 6px;
+  color: #aaa;
+  font-size: 13px;
+}
+
+.modal input,
+.modal select {
+  width: 100%;
+  padding: 13px;
+  border-radius: 8px;
+  border: 1px solid #444;
+  background: #111;
+  color: #fff;
+  font-size: 16px;
+}
+
+.modalButtons {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.modalButtons button {
+  flex: 1;
+  padding: 13px;
+  border-radius: 8px;
+  border: 1px solid #555;
+  background: #333;
+  color: #fff;
+  font-weight: bold;
+}
+
+.modalButtons .save {
+  background: #fff;
+  color: #111;
+}
+
+.notice {
+  display: none;
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  background: #fff;
+  color: #111;
+  padding: 12px 18px;
+  border-radius: 999px;
+  font-weight: bold;
+  z-index: 200;
+}
+
+.notice.show {
+  display: block;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h1>条件管理</h1>
+
+  <div class="mode">
+
+    <button id="easyBtn">
+      EASY
+    </button>
+
+    <button id="hardBtn" class="active">
+      HARD
+    </button>
+
+  </div>
+
+
+  <div class="toolbar">
+
+    <button id="editBtn">
+      編集
+    </button>
+
+    <button id="addBtn">
+      追加
+    </button>
+
+    <button id="deleteBtn" class="deleteMode">
+      削除
+    </button>
+
+  </div>
+
+
+  <div id="conditionTree"></div>
+
+
+  <a href="roulette.html" class="back">
+    ← ルーレットへ戻る
+  </a>
+
+</div>
+
+
+<!-- 編集・追加モーダル -->
+
+<div id="modalBg" class="modalBg">
+
+  <div class="modal">
+
+    <h2 id="modalTitle">
+      条件を編集
+    </h2>
+
+    <label for="categoryInput">
+      ジャンル
+    </label>
+
+    <select id="categoryInput"></select>
+
+
+    <label for="textInput">
+      条件文
+    </label>
+
+    <input
+      id="textInput"
+      type="text"
+      placeholder="例：曲名に食べ物が入っている"
+    >
+
+
+    <label for="multiplierInput">
+      倍率
+    </label>
+
+    <input
+      id="multiplierInput"
+      type="number"
+      min="0"
+      step="0.1"
+      value="1.5"
+    >
+
+
+    <div class="modalButtons">
+
+      <button id="cancelBtn">
+        キャンセル
+      </button>
+
+      <button id="saveBtn" class="save">
+        保存
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<div id="notice" class="notice">
+  保存しました
+</div>
+
+
+<script>
+
+
+// ============================================================
+// 共通データ
+// ============================================================
+
+const STORAGE_KEY =
+  "karaokeBowlingConditions_v1";
+
+
+// ============================================================
+// 初期条件
+// index.html と同じデータを使用
+// ============================================================
+
+const defaultConditions = {
+
+  easy: [
+
+    {
+      category: "その他",
+      text: "自由！",
+      multiplier: 0.9
+    }
+
+  ],
+
+  hard: [
+
+    {
+      category: "アーティスト",
+      text: "男性ボーカルの曲",
+      multiplier: 1.4
+    },
+
+    {
+      category: "アーティスト",
+      text: "女性ボーカルの曲",
+      multiplier: 1.4
+    },
+
+    {
+      category: "アーティスト",
+      text: "あ行から始まるアーティスト",
+      multiplier: 1.5
+    },
+
+    {
+      category: "アーティスト",
+      text: "か行から始まるアーティスト",
+      multiplier: 1.5
+    },
+
+    {
+      category: "アーティスト",
+      text: "さ行から始まるアーティスト",
+      multiplier: 1.5
+    },
+
+    {
+      category: "アーティスト",
+      text: "た行から始まるアーティスト",
+      multiplier: 1.5
+    },
+
+    {
+      category: "アーティスト",
+      text: "な行から始まるアーティスト",
+      multiplier: 1.5
+    },
+
+    {
+      category: "アーティスト",
+      text: "は行から始まるアーティスト",
+      multiplier: 1.5
+    },
+
+    {
+      category: "アーティスト",
+      text: "ま行から始まるアーティスト",
+      multiplier: 1.5
+    },
+
+    {
+      category: "アーティスト",
+      text: "や行から始まるアーティスト",
+      multiplier: 1.5
+    },
+
+    {
+      category: "アーティスト",
+      text: "ら行から始まるアーティスト",
+      multiplier: 1.5
+    },
+
+    {
+      category: "アーティスト",
+      text: "わ行から始まるアーティスト",
+      multiplier: 1.5
+    },
+
+    {
+      category: "アーティスト",
+      text: "アーティスト名が漢字から始まる",
+      multiplier: 1.4
+    },
+
+    {
+      category: "アーティスト",
+      text: "アーティスト名がカタカナから始まる",
+      multiplier: 1.4
+    },
+
+    {
+      category: "アーティスト",
+      text: "アーティスト名がひらがなから始まる",
+      multiplier: 1.4
+    },
+
+    {
+      category: "アーティスト",
+      text: "アーティスト名がアルファベットから始まる",
+      multiplier: 1.4
+    },
+
+    {
+      category: "アーティスト",
+      text: "アーティスト名が5文字以上",
+      multiplier: 1.3
+    },
+
+    {
+      category: "アーティスト",
+      text: "アーティスト名が10文字以上",
+      multiplier: 1.5
+    },
+
+    {
+      category: "アーティスト",
+      text: "アーティスト名が5文字以下",
+      multiplier: 1.3
+    },
+
+    {
+      category: "アーティスト",
+      text: "アーティスト名が8文字以下",
+      multiplier: 1.3
+    },
+
+    {
+      category: "アーティスト",
+      text: "ソロアーティスト",
+      multiplier: 1.4
+    },
+
+    {
+      category: "アーティスト",
+      text: "男女混成グループ",
+      multiplier: 1.7
+    },
+
+    {
+      category: "アーティスト",
+      text: "バンド",
+      multiplier: 1.3
+    },
+
+    {
+      category: "アーティスト",
+      text: "アーティスト名に色が入っている",
+      multiplier: 1.7
+    },
+
+    {
+      category: "曲名",
+      text: "あ行から始まる曲名",
+      multiplier: 1.5
+    },
+
+    {
+      category: "曲名",
+      text: "か行から始まる曲名",
+      multiplier: 1.5
+    },
+
+    {
+      category: "曲名",
+      text: "さ行から始まる曲名",
+      multiplier: 1.5
+    },
+
+    {
+      category: "曲名",
+      text: "た行から始まる曲名",
+      multiplier: 1.5
+    },
+
+    {
+      category: "曲名",
+      text: "な行から始まる曲名",
+      multiplier: 1.5
+    },
+
+    {
+      category: "曲名",
+      text: "は行から始まる曲名",
+      multiplier: 1.5
+    },
+
+    {
+      category: "曲名",
+      text: "ま行から始まる曲名",
+      multiplier: 1.5
+    },
+
+    {
+      category: "曲名",
+      text: "や行から始まる曲名",
+      multiplier: 1.5
+    },
+
+    {
+      category: "曲名",
+      text: "ら行から始まる曲名",
+      multiplier: 1.5
+    },
+
+    {
+      category: "曲名",
+      text: "わ行から始まる曲名",
+      multiplier: 1.5
+    },
+
+    {
+      category: "曲名",
+      text: "曲名が漢字のみ",
+      multiplier: 1.7
+    },
+
+    {
+      category: "曲名",
+      text: "曲名がひらがなのみ",
+      multiplier: 1.7
+    },
+
+    {
+      category: "曲名",
+      text: "曲名がカタカナのみ",
+      multiplier: 1.6
+    },
+
+    {
+      category: "曲名",
+      text: "曲名がアルファベットのみ",
+      multiplier: 1.7
+    },
+
+    {
+      category: "曲名",
+      text: "曲名に漢字を含む",
+      multiplier: 1.3
+    },
+
+    {
+      category: "曲名",
+      text: "曲名に数字を含む",
+      multiplier: 1.5
+    },
+
+    {
+      category: "曲名",
+      text: "曲名にアルファベットを含む",
+      multiplier: 1.4
+    },
+
+    {
+      category: "曲名",
+      text: "曲名が5文字以上",
+      multiplier: 1.3
+    },
+
+    {
+      category: "曲名",
+      text: "曲名が10文字以上",
+      multiplier: 1.6
+    },
+
+    {
+      category: "曲名",
+      text: "曲名が5文字以下",
+      multiplier: 1.3
+    },
+
+    {
+      category: "曲名",
+      text: "曲名が8文字以下",
+      multiplier: 1.3
+    },
+
+    {
+      category: "曲名",
+      text: "曲名に「愛」が入っている",
+      multiplier: 1.5
+    },
+
+    {
+      category: "曲名",
+      text: "曲名に「の」が入っている",
+      multiplier: 1.2
+    },
+
+    {
+      category: "曲名",
+      text: "曲名に花の名前が入っている",
+      multiplier: 1.8
+    },
+
+    {
+      category: "年代",
+      text: "2000年代以前の曲",
+      multiplier: 1.5
+    },
+
+    {
+      category: "年代",
+      text: "2010年代以降の曲",
+      multiplier: 1.3
+    },
+
+    {
+      category: "年代",
+      text: "昭和の曲",
+      multiplier: 1.8
+    },
+
+    {
+      category: "年代",
+      text: "平成の曲",
+      multiplier: 1.3
+    },
+
+    {
+      category: "年代",
+      text: "令和の曲",
+      multiplier: 1.5
+    },
+
+    {
+      category: "年代",
+      text: "平成生まれのアーティストの曲",
+      multiplier: 1.5
+    },
+
+    {
+      category: "タイアップ",
+      text: "アニメの曲",
+      multiplier: 1.4
+    },
+
+    {
+      category: "タイアップ",
+      text: "ドラマの曲",
+      multiplier: 1.4
+    },
+
+    {
+      category: "タイアップ",
+      text: "映画の曲",
+      multiplier: 1.5
+    },
+
+    {
+      category: "タイアップ",
+      text: "CMソング",
+      multiplier: 1.5
+    },
+
+    {
+      category: "歌詞",
+      text: "歌詞に食べ物が出てくる",
+      multiplier: 1.5
+    },
+
+    {
+      category: "歌詞",
+      text: "歌詞に地名が出てくる",
+      multiplier: 1.5
+    },
+
+    {
+      category: "歌詞",
+      text: "歌詞に乗り物が出てくる",
+      multiplier: 1.5
+    },
+
+    {
+      category: "ランキング",
+      text: "カラオケランキングに入っている曲",
+      multiplier: 1.3
+    },
+
+    {
+      category: "前の人とのつながり",
+      text: "前の人の曲名としりとり",
+      multiplier: 1.7
+    },
+
+    {
+      category: "前の人とのつながり",
+      text: "前の人のアーティスト名としりとり",
+      multiplier: 1.7
+    }
+
+  ]
+
+};
+
+
+// ============================================================
+// データ読み込み
+// ============================================================
+
+function loadConditions() {
+
+  const saved =
+    localStorage.getItem(STORAGE_KEY);
+
+  if (!saved) {
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(defaultConditions)
+    );
+
+    return structuredClone(defaultConditions);
+
+  }
+
+  try {
+
+    return JSON.parse(saved);
+
+  } catch {
+
+    return structuredClone(defaultConditions);
+
+  }
+
+}
+
+
+let conditions = loadConditions();
+
+let currentMode = "hard";
+
+let selectedIndex = null;
+
+let selectedCategory = null;
+
+let actionMode = null;
+
+
+// ============================================================
+// DOM
+// ============================================================
+
+const tree =
+  document.getElementById("conditionTree");
+
+const editBtn =
+  document.getElementById("editBtn");
+
+const addBtn =
+  document.getElementById("addBtn");
+
+const deleteBtn =
+  document.getElementById("deleteBtn");
+
+const modalBg =
+  document.getElementById("modalBg");
+
+const modalTitle =
+  document.getElementById("modalTitle");
+
+const categoryInput =
+  document.getElementById("categoryInput");
+
+const textInput =
+  document.getElementById("textInput");
+
+const multiplierInput =
+  document.getElementById("multiplierInput");
+
+const notice =
+  document.getElementById("notice");
+
+
+// ============================================================
+// ジャンル順
+// ============================================================
+
+const categoryOrder = [
+
+  "アーティスト",
+
+  "曲名",
+
+  "年代",
+
+  "タイアップ",
+
+  "歌詞",
+
+  "ランキング",
+
+  "前の人とのつながり",
+
+  "その他"
+
+];
+
+
+// ============================================================
+// ジャンル取得
+// ============================================================
+
+function getCategories() {
+
+  const categories = [];
+
+  conditions[currentMode].forEach(item => {
+
+    if (!categories.includes(item.category)) {
+
+      categories.push(item.category);
+
+    }
+
+  });
+
+  categoryOrder.forEach(category => {
+
+    if (
+      categories.includes(category) &&
+      !categories.includes(category + "_done")
+    ) {}
+
+  });
+
+  return [
+
+    ...categoryOrder.filter(
+      category => categories.includes(category)
+    ),
+
+    ...categories.filter(
+      category => !categoryOrder.includes(category)
+    )
+
+  ];
+
+}
+
+
+// ============================================================
+// 条件一覧表示
+// ============================================================
+
+function renderTree() {
+
+  tree.innerHTML = "";
+
+  const categories =
+    getCategories();
+
+  if (categories.length === 0) {
+
+    tree.innerHTML =
+      `<div class="empty">条件がありません</div>`;
+
+    return;
+
+  }
+
+  categories.forEach(category => {
+
+    const items =
+      conditions[currentMode]
+        .map((item, index) => ({
+          ...item,
+          index
+        }))
+        .filter(
+          item => item.category === category
+        );
+
+
+    const folder =
+      document.createElement("div");
+
+    folder.className = "folder";
+
+
+    const header =
+      document.createElement("div");
+
+    header.className = "folderHeader";
+
+    header.innerHTML = `
+
+      <div>
+        <span class="folderTitle">
+          📁 ${escapeHtml(category)}
+        </span>
+
+        <span class="folderCount">
+          ${items.length}件
+        </span>
+      </div>
+
+      <span class="folderArrow">＋</span>
+
+    `;
+
+
+    const body =
+      document.createElement("div");
+
+    body.className = "folderBody";
+
+
+    header.addEventListener(
+      "click",
+      () => {
+
+        folder.classList.toggle("open");
+
+        const arrow =
+          header.querySelector(".folderArrow");
+
+        arrow.textContent =
+          folder.classList.contains("open")
+            ? "−"
+            : "＋";
+
+      }
+    );
+
+
+    items.forEach(item => {
+
+      const condition =
+        document.createElement("div");
+
+      condition.className =
+        "conditionItem";
+
+
+      condition.innerHTML = `
+
+        <div class="conditionText">
+          ${escapeHtml(item.text)}
+        </div>
+
+        <div class="conditionMeta">
+          倍率 ×${Number(item.multiplier).toFixed(1)}
+        </div>
+
+      `;
+
+
+      condition.addEventListener(
+        "click",
+        event => {
+
+          event.stopPropagation();
+
+          selectCondition(
+            item.index,
+            category,
+            condition
+          );
+
+        }
+      );
+
+
+      body.appendChild(condition);
+
+    });
+
+
+    folder.appendChild(header);
+
+    folder.appendChild(body);
+
+    tree.appendChild(folder);
+
+  });
+
+}
+
+
+// ============================================================
+// 条件選択
+// ============================================================
+
+function selectCondition(
+  index,
+  category,
+  element
+) {
+
+  document
+    .querySelectorAll(".conditionItem")
+    .forEach(el =>
+      el.classList.remove("selected")
+    );
+
+
+  selectedIndex = index;
+
+  selectedCategory = category;
+
+  element.classList.add("selected");
+
+
+  if (actionMode === "edit") {
+
+    openEditModal();
+
+  }
+
+  else if (actionMode === "delete") {
+
+    deleteCondition();
+
+  }
+
+}
+
+
+// ============================================================
+// 編集
+// ============================================================
+
+editBtn.addEventListener(
+  "click",
+  () => {
+
+    actionMode =
+      actionMode === "edit"
+        ? null
+        : "edit";
+
+    editBtn.classList.toggle(
+      "active",
+      actionMode === "edit"
+    );
+
+    deleteBtn.classList.remove(
+      "active"
+    );
+
+  }
+);
+
+
+// ============================================================
+// 追加
+// ============================================================
+
+addBtn.addEventListener(
+  "click",
+  () => {
+
+    actionMode = null;
+
+    editBtn.classList.remove(
+      "active"
+    );
+
+    deleteBtn.classList.remove(
+      "active"
+    );
+
+    openAddModal();
+
+  }
+);
+
+
+// ============================================================
+// 削除
+// ============================================================
+
+deleteBtn.addEventListener(
+  "click",
+  () => {
+
+    actionMode =
+      actionMode === "delete"
+        ? null
+        : "delete";
+
+    deleteBtn.classList.toggle(
+      "active",
+      actionMode === "delete"
+    );
+
+    editBtn.classList.remove(
+      "active"
+    );
+
+  }
+);
+
+
+// ============================================================
+// 編集モーダル
+// ============================================================
+
+function openEditModal() {
+
+  if (selectedIndex === null) {
+
+    alert("編集する条件を選択してください");
+
+    return;
+
+  }
+
+
+  const item =
+    conditions[currentMode][selectedIndex];
+
+
+  modalTitle.textContent =
+    "条件を編集";
+
+
+  fillCategorySelect();
+
+
+  categoryInput.value =
+    item.category;
+
+  textInput.value =
+    item.text;
+
+  multiplierInput.value =
+    item.multiplier;
+
+
+  modalBg.classList.add("show");
+
+}
+
+
+// ============================================================
+// 追加モーダル
+// ============================================================
+
+function openAddModal() {
+
+  modalTitle.textContent =
+    "条件を追加";
+
+
+  fillCategorySelect();
+
+
+  if (selectedCategory) {
+
+    categoryInput.value =
+      selectedCategory;
+
+  }
+
+
+  textInput.value = "";
+
+  multiplierInput.value = "1.5";
+
+
+  modalBg.classList.add("show");
+
+}
+
+
+// ============================================================
+// ジャンル選択肢
+// ============================================================
+
+function fillCategorySelect() {
+
+  categoryInput.innerHTML = "";
+
+
+  const categories =
+    getCategories();
+
+
+  categories.forEach(category => {
+
+    const option =
+      document.createElement("option");
+
+    option.value =
+      category;
+
+    option.textContent =
+      category;
+
+    categoryInput.appendChild(option);
+
+  });
+
+
+  const newOption =
+    document.createElement("option");
+
+  newOption.value =
+    "__NEW__";
+
+  newOption.textContent =
+    "＋ 新しいジャンル";
+
+
+  categoryInput.appendChild(
+    newOption
+  );
+
+}
+
+
+// ============================================================
+// 新ジャンル
+// ============================================================
+
+categoryInput.addEventListener(
+  "change",
+  () => {
+
+    if (
+      categoryInput.value === "__NEW__"
+    ) {
+
+      const newCategory =
+        prompt(
+          "新しいジャンル名を入力してください"
+        );
+
+
+      if (newCategory &&
+          newCategory.trim()) {
+
+        const exists =
+          getCategories().includes(
+            newCategory.trim()
+          );
+
+
+        if (exists) {
+
+          alert(
+            "そのジャンルはすでにあります"
+          );
+
+          fillCategorySelect();
+
+          return;
+
+        }
+
+
+        const option =
+          document.createElement("option");
+
+        option.value =
+          newCategory.trim();
+
+        option.textContent =
+          newCategory.trim();
+
+
+        categoryInput.insertBefore(
+          option,
+          categoryInput.lastElementChild
+        );
+
+
+        categoryInput.value =
+          newCategory.trim();
+
+      }
+
+      else {
+
+        fillCategorySelect();
+
+      }
+
+    }
+
+  }
+);
+
+
+// ============================================================
+// 保存
+// ============================================================
+
+document
+  .getElementById("saveBtn")
+  .addEventListener(
+    "click",
+    () => {
+
+      const text =
+        textInput.value.trim();
+
+      const multiplier =
+        Number(multiplierInput.value);
+
+
+      if (!text) {
+
+        alert(
+          "条件文を入力してください"
+        );
+
+        return;
+
+      }
+
+
+      if (
+        !Number.isFinite(multiplier) ||
+        multiplier <= 0
+      ) {
+
+        alert(
+          "倍率を正しく入力してください"
+        );
+
+        return;
+
+      }
+
+
+      let category =
+        categoryInput.value;
+
+
+      if (
+        !category ||
+        category === "__NEW__"
+      ) {
+
+        alert(
+          "ジャンルを選択してください"
+        );
+
+        return;
+
+      }
+
+
+      if (
+        modalTitle.textContent ===
+        "条件を編集"
+      ) {
+
+        if (selectedIndex === null) {
+          return;
+        }
+
+
+        conditions[currentMode]
+          [selectedIndex] = {
+
+            category,
+
+            text,
+
+            multiplier
+
+          };
+
+      }
+
+      else {
+
+        conditions[currentMode].push({
+
+          category,
+
+          text,
+
+          multiplier
+
+        });
+
+      }
+
+
+      saveConditions();
+
+      closeModal();
+
+      renderTree();
+
+      showNotice(
+        "保存しました"
+      );
+
+    }
+  );
+
+
+// ============================================================
+// 削除
+// ============================================================
+
+function deleteCondition() {
+
+  if (selectedIndex === null) {
+
+    alert(
+      "削除する条件を選択してください"
+    );
+
+    return;
+
+  }
+
+
+  const item =
+    conditions[currentMode][selectedIndex];
+
+
+  const ok =
+    confirm(
+      `「${item.text}」を削除しますか？`
+    );
+
+
+  if (!ok) {
+
+    actionMode = null;
+
+    deleteBtn.classList.remove(
+      "active"
+    );
+
+    return;
+
+  }
+
+
+  conditions[currentMode].splice(
+    selectedIndex,
+    1
+  );
+
+
+  selectedIndex = null;
+
+  selectedCategory = null;
+
+  actionMode = null;
+
+
+  deleteBtn.classList.remove(
+    "active"
+  );
+
+
+  saveConditions();
+
+  renderTree();
+
+  showNotice(
+    "削除しました"
+  );
+
+}
+
+
+// ============================================================
+// キャンセル
+// ============================================================
+
+document
+  .getElementById("cancelBtn")
+  .addEventListener(
+    "click",
+    closeModal
+  );
+
+
+modalBg.addEventListener(
+  "click",
+  event => {
+
+    if (
+      event.target === modalBg
+    ) {
+
+      closeModal();
+
+    }
+
+  }
+);
+
+
+function closeModal() {
+
+  modalBg.classList.remove(
+    "show"
+  );
+
+}
+
+
+// ============================================================
+// データ保存
+// ============================================================
+
+function saveConditions() {
+
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify(conditions)
+  );
+
+}
+
+
+// ============================================================
+// EASY / HARD
+// ============================================================
+
+document
+  .getElementById("easyBtn")
+  .addEventListener(
+    "click",
+    () => {
+
+      currentMode = "easy";
+
+      selectedIndex = null;
+
+      selectedCategory = null;
+
+      actionMode = null;
+
+      document
+        .getElementById("easyBtn")
+        .classList.add("active");
+
+      document
+        .getElementById("hardBtn")
+        .classList.remove("active");
+
+      editBtn.classList.remove(
+        "active"
+      );
+
+      deleteBtn.classList.remove(
+        "active"
+      );
+
+      renderTree();
+
+    }
+  );
+
+
+document
+  .getElementById("hardBtn")
+  .addEventListener(
+    "click",
+    () => {
+
+      currentMode = "hard";
+
+      selectedIndex = null;
+
+      selectedCategory = null;
+
+      actionMode = null;
+
+      document
+        .getElementById("hardBtn")
+        .classList.add("active");
+
+      document
+        .getElementById("easyBtn")
+        .classList.remove("active");
+
+      editBtn.classList.remove(
+        "active"
+      );
+
+      deleteBtn.classList.remove(
+        "active"
+      );
+
+      renderTree();
+
+    }
+  );
+
+
+// ============================================================
+// 通知
+// ============================================================
+
+function showNotice(message) {
+
+  notice.textContent =
+    message;
+
+  notice.classList.add("show");
+
+
+  setTimeout(
+    () => {
+
+      notice.classList.remove(
+        "show"
+      );
+
+    },
+    1600
+  );
+
+}
+
+
+// ============================================================
+// エスケープ
+// ============================================================
+
+function escapeHtml(str) {
+
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
+}
+
+
+// ============================================================
+// 初期表示
+// ============================================================
+
+renderTree();
+
+</script>
+
+</body>
+</html>
