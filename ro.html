@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>スロット風ルーレット</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Canvas Confetti (紙吹雪演出) -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;900&display=swap');
+    
+    body {
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+      background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 100%);
+    }
+
+    /* ネオンテキスト & シェード */
+    .neon-text {
+      text-shadow: 0 0 10px rgba(236, 72, 153, 0.8), 0 0 20px rgba(168, 85, 247, 0.8);
+    }
+    .slot-frame {
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.8), 0 0 25px rgba(236, 72, 153, 0.4);
+    }
+
+    /* スロット視覚効果：上下グラデーションマスク（立体感） */
+    .slot-overlay {
+      background: linear-gradient(
+        to bottom,
+        rgba(15, 23, 42, 0.95) 0%,
+        rgba(15, 23, 42, 0) 25%,
+        rgba(15, 23, 42, 0) 75%,
+        rgba(15, 23, 42, 0.95) 100%
+      );
+    }
+
+    /* ドラムのトランジションイージング */
+    .reel-strip {
+      will-change: transform;
+    }
+  </style>
+</head>
+<body class="min-h-screen text-white flex flex-col justify-between p-4 selection:bg-pink-500 selection:text-white">
+
+  <!-- ヘッダー -->
+  <header class="text-center pt-2 pb-4">
+    <h1 class="text-3xl md:text-4xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-300 to-indigo-400 neon-text">
+      🎰 CHALLENGE ROULETTE 🎰
+    </h1>
+    <p class="text-xs md:text-sm text-slate-400 mt-1">何が出るかな？運命の挑戦決定！</p>
+  </header>
+
+  <!-- メインコンテンツ (スロットディスプレイ) -->
+  <main class="max-w-md w-full mx-auto flex-1 flex flex-col justify-center items-center my-2">
+    
+    <!-- スロット本体外枠 -->
+    <div class="relative w-full bg-slate-900 border-4 border-yellow-400/80 rounded-3xl p-4 slot-frame">
+      
+      <!-- ペカる装飾ライト (四隅) -->
+      <div class="absolute -top-2 -left-2 w-5 h-5 bg-yellow-300 rounded-full animate-ping opacity-75"></div>
+      <div class="absolute -top-2 -right-2 w-5 h-5 bg-pink-500 rounded-full animate-ping opacity-75"></div>
+      <div class="absolute -bottom-2 -left-2 w-5 h-5 bg-cyan-400 rounded-full animate-ping opacity-75"></div>
+      <div class="absolute -bottom-2 -right-2 w-5 h-5 bg-yellow-300 rounded-full animate-ping opacity-75"></div>
+
+      <!-- スロット窓 (リール表示域) -->
+      <div id="slot-window" class="relative h-44 md:h-52 w-full bg-slate-950 rounded-2xl overflow-hidden border-2 border-indigo-500/50">
+        
+        <!-- 中央当選ガイドライン -->
+        <div class="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-16 md:h-20 bg-indigo-500/10 border-y-2 border-yellow-400/70 z-10 pointer-events-none flex justify-between items-center px-2">
+          <span class="text-yellow-400 text-lg">▶</span>
+          <span class="text-yellow-400 text-lg">◀</span>
+        </div>
+
+        <!-- シャドーオーバーレイ（上下に立体感） -->
+        <div class="absolute inset-0 slot-overlay z-20 pointer-events-none"></div>
+
+        <!-- 実際に回転するドラムリスト -->
+        <div id="reel-strip" class="reel-strip absolute w-full top-0 left-0 text-center">
+          <!-- JSで動的にアイテムが流し込まれます -->
+        </div>
+      </div>
+
+      <!-- スタートボタン -->
+      <div class="mt-6 flex justify-center">
+        <button
+          id="spin-btn"
+          onclick="startSpin()"
+          class="w-full py-4 rounded-2xl bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500 hover:from-pink-600 hover:to-yellow-600 active:scale-95 transition font-black text-2xl tracking-widest shadow-lg shadow-pink-500/30 border-b-4 border-red-700 flex items-center justify-center gap-2"
+        >
+          <span>SPIN! (スタート)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 結果確定ダイアログ/バナー -->
+    <div id="result-banner" class="opacity-0 transition-opacity duration-500 mt-4 text-center">
+      <span class="text-xs text-yellow-400 font-bold uppercase tracking-widest">★ RESULT ★</span>
+      <div id="result-text" class="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-300 to-cyan-300 mt-1">
+        -
+      </div>
+    </div>
+
+  </main>
+
+  <!-- フッター & 項目設定アコーディオン -->
+  <footer class="max-w-md w-full mx-auto">
+    <div class="bg-slate-800/80 rounded-2xl border border-slate-700 overflow-hidden">
+      <button 
+        onclick="toggleSettings()"
+        class="w-full py-2.5 px-4 text-sm font-bold text-slate-300 flex justify-between items-center hover:bg-slate-700/50 transition"
+      >
+        <span>⚙️ 項目設定 (追加・編集)</span>
+        <span id="settings-arrow">▼</span>
+      </button>
+
+      <!-- 設定エリア -->
+      <div id="settings-panel" class="hidden p-4 border-t border-slate-700 space-y-3 bg-slate-900/90">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">ルーレット項目 (1行に1つ入力)</label>
+          <textarea 
+            id="items-input" 
+            rows="5" 
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl p-2.5 text-sm text-slate-200 focus:outline-none focus:border-pink-500"
+            placeholder="項目を改行で入力してください"
+          ></textarea>
+        </div>
+
+        <div class="flex gap-2">
+          <button 
+            onclick="saveItems()" 
+            class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl transition"
+          >
+            保存して適用
+          </button>
+          <button 
+            onclick="resetDefaultItems()" 
+            class="py-2 px-3 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold text-xs rounded-xl transition"
+          >
+            初期値に戻す
+          </button>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // デフォルトのお題リスト（カラオケ・ゲーム向け）
+    const DEFAULT_ITEMS = [
+      "🎤 アニメソング限定",
+      "📻 90年代ヒットソング",
+      "🔄 男声/女声キー変更",
+      "🚫 裏声・ファルセット禁止",
+      "🎁 ボーナスポイント +10pt",
+      "👑 最高得点者のお手本熱唱",
+      "💃 ノリノリでダンスしながら歌唱",
+      "⚡ 激ムズ曲をリクエスト",
+      "🤝 全員でサビを大合唱",
+      "🤪 即興で全力モノマネ歌唱"
+    ];
+
+    let items = [];
+    let isSpinning = false;
+    const ITEM_HEIGHT = 80; // 各セルの高さ (px)
+
+    // 音声エフェクト用 Web Audio API Context
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    // カチッという回転効果音
+    function playTickSound() {
+      if (!audioCtx) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.03);
+        
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.03);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.03);
+      } catch (e) {}
+    }
+
+    // ファンファーレ/決定音
+    function playWinSound() {
+      if (!audioCtx) return;
+      try {
+        const now = audioCtx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+        
+        notes.forEach((freq, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          
+          const startTime = now + idx * 0.08;
+          gain.gain.setValueAtTime(0.2, startTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.3);
+
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          osc.start(startTime);
+          osc.stop(startTime + 0.3);
+        });
+      } catch (e) {}
+    }
+
+    // 初期化ロード
+    window.addEventListener('DOMContentLoaded', () => {
+      const saved = localStorage.getItem('roulette_items');
+      if (saved) {
+        try {
+          items = JSON.parse(saved);
+        } catch(e) {
+          items = [...DEFAULT_ITEMS];
+        }
+      } else {
+        items = [...DEFAULT_ITEMS];
+      }
+      
+      document.getElementById('items-input').value = items.join('\n');
+      buildReelInitial();
+    });
+
+    // スロットの初期表示ドラム生成
+    function buildReelInitial() {
+      const reel = document.getElementById('reel-strip');
+      reel.style.transition = 'none';
+      reel.style.transform = 'translateY(0px)';
+      reel.innerHTML = '';
+
+      if (items.length === 0) items = ['項目を設定してください'];
+
+      // 初期表示用の1番目のアイテム
+      const div = createItemElement(items[0]);
+      reel.appendChild(div);
+    }
+
+    function createItemElement(text) {
+      const div = document.createElement('div');
+      div.className = `h-[80px] flex items-center justify-center px-4 font-bold text-lg md:text-xl text-center break-all select-none text-yellow-300`;
+      div.textContent = text;
+      return div;
+    }
+
+    // スロット回転メインロジック
+    function startSpin() {
+      if (isSpinning) return;
+      initAudio();
+
+      if (!items || items.length === 0) {
+        alert('項目を1つ以上設定してください。');
+        return;
+      }
+
+      isSpinning = true;
+      const spinBtn = document.getElementById('spin-btn');
+      spinBtn.disabled = true;
+      spinBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+      // 結果表示リセット
+      const resultBanner = document.getElementById('result-banner');
+      resultBanner.classList.add('opacity-0');
+
+      // 当選インデックスを決定
+      const selectedIndex = Math.floor(Math.random() * items.length);
+      const selectedText = items[selectedIndex];
+
+      // リールを拡張構築（回転ドラムの演出用に重複ループを作成）
+      const reel = document.getElementById('reel-strip');
+      reel.style.transition = 'none';
+      reel.style.transform = 'translateY(0px)';
+      reel.innerHTML = '';
+
+      const minRounds = 5; // ドラムが何周回るか
+      const totalItems = [];
+
+      // 開始時点でのダミー
+      totalItems.push(items[0]);
+
+      // 何周分か繰り返す
+      for (let r = 0; r < minRounds; r++) {
+        for (let i = 0; i < items.length; i++) {
+          totalItems.push(items[i]);
+        }
+      }
+
+      // 最後に選ばれたアイテムを配置
+      totalItems.push(selectedText);
+
+      // DOM要素追加
+      totalItems.forEach(itemText => {
+        reel.appendChild(createItemElement(itemText));
+      });
+
+      // 目標のY座標位置（中央に合わせるオフセット計算）
+      // スロット窓の高さ 176px (h-44) または 208px (h-52) に対し、アイテム高さ 80px の中央合わせ
+      const windowHeight = document.getElementById('slot-window').clientHeight;
+      const centerOffset = (windowHeight - ITEM_HEIGHT) / 2;
+      
+      const targetIndex = totalItems.length - 1;
+      const targetY = -(targetIndex * ITEM_HEIGHT) + centerOffset;
+
+      // 回転スタート
+      const spinDuration = 3500; // アニメーション時間 (ms)
+      
+      // イージング適用（一気に加速してから滑らかに停止）
+      reel.style.transition = `transform ${spinDuration}ms cubic-bezier(0.15, 0.85, 0.15, 1)`;
+      reel.style.transform = `translateY(${targetY}px)`;
+
+      // スロット回転中の効果音タイマー
+      let soundInterval = setInterval(() => {
+        playTickSound();
+      }, 90);
+
+      // 進行に応じて効果音の間隔を遅くする
+      setTimeout(() => {
+        clearInterval(soundInterval);
+        soundInterval = setInterval(() => {
+          playTickSound();
+        }, 180);
+      }, spinDuration * 0.6);
+
+      setTimeout(() => {
+        clearInterval(soundInterval);
+        soundInterval = setInterval(() => {
+          playTickSound();
+        }, 320);
+      }, spinDuration * 0.85);
+
+      // アニメーション完了時
+      setTimeout(() => {
+        clearInterval(soundInterval);
+        playWinSound();
+
+        // 紙吹雪エフェクト
+        confetti({
+          particleCount: 70,
+          spread: 60,
+          origin: { y: 0.7 }
+        });
+
+        // 結果表示
+        document.getElementById('result-text').textContent = selectedText;
+        resultBanner.classList.remove('opacity-0');
+
+        isSpinning = false;
+        spinBtn.disabled = false;
+        spinBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      }, spinDuration + 100);
+    }
+
+    // 設定パネル開閉
+    function toggleSettings() {
+      const panel = document.getElementById('settings-panel');
+      const arrow = document.getElementById('settings-arrow');
+      panel.classList.toggle('hidden');
+      arrow.textContent = panel.classList.contains('hidden') ? '▼' : '▲';
+    }
+
+    // 設定項目の保存
+    function saveItems() {
+      const rawText = document.getElementById('items-input').value;
+      const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      
+      if (lines.length === 0) {
+        alert('最低1つの項目を入力してください。');
+        return;
+      }
+
+      items = lines;
+      localStorage.setItem('roulette_items', JSON.stringify(items));
+      buildReelInitial();
+      alert('項目を更新しました！');
+      toggleSettings();
+    }
+
+    // 初期化
+    function resetDefaultItems() {
+      if (confirm('項目を初期設定に戻しますか？')) {
+        items = [...DEFAULT_ITEMS];
+        document.getElementById('items-input').value = items.join('\n');
+        localStorage.removeItem('roulette_items');
+        buildReelInitial();
+        alert('初期値に戻しました。');
+      }
+    }
+  </script>
+</body>
+</html>
