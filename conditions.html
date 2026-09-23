@@ -83,6 +83,16 @@ h1 {
   color: #fff;
 }
 
+/* 書き出しボタン */
+.toolbar button.exportBtn {
+  background: #252525;
+  border-color: #777;
+}
+
+.toolbar button.exportBtn:active {
+  background: #444;
+}
+
 .folder {
   border: 1px solid #333;
   border-radius: 12px;
@@ -295,6 +305,10 @@ h1 {
       削除
     </button>
 
+    <button id="exportBtn" class="exportBtn">
+      書き出し
+    </button>
+
   </div>
 
 
@@ -384,7 +398,6 @@ const STORAGE_KEY =
 
 // ============================================================
 // 初期条件
-// index.html と同じデータを使用
 // ============================================================
 
 const defaultConditions = {
@@ -849,6 +862,9 @@ const addBtn =
 
 const deleteBtn =
   document.getElementById("deleteBtn");
+
+const exportBtn =
+  document.getElementById("exportBtn");
 
 const modalBg =
   document.getElementById("modalBg");
@@ -1609,6 +1625,230 @@ function saveConditions() {
     STORAGE_KEY,
     JSON.stringify(conditions)
   );
+
+}
+
+
+// ============================================================
+// 条件データ書き出し
+// ============================================================
+
+exportBtn.addEventListener(
+  "click",
+  exportConditions
+);
+
+
+function exportConditions() {
+
+  /*
+   * 書き出し直前に localStorage の最新データを
+   * 読み直す。
+   *
+   * これにより、現在このページに保存されている
+   * 最新状態を確実に書き出す。
+   */
+
+  const saved =
+    localStorage.getItem(STORAGE_KEY);
+
+  let exportData = conditions;
+
+  if (saved) {
+
+    try {
+
+      exportData = JSON.parse(saved);
+
+    } catch {
+
+      exportData = conditions;
+
+    }
+
+  }
+
+
+  let text = "";
+
+  text += "カラオケボウリング 条件データ\n";
+  text += "================================\n";
+  text += "書き出し日時：";
+  text += new Date().toLocaleString("ja-JP");
+  text += "\n\n";
+
+
+  // ----------------------------------------------------------
+  // EASY
+  // ----------------------------------------------------------
+
+  text += "[EASY]\n";
+  text += "--------------------------------\n\n";
+
+  text += createTextForMode(
+    exportData.easy || []
+  );
+
+
+  // ----------------------------------------------------------
+  // HARD
+  // ----------------------------------------------------------
+
+  text += "\n";
+  text += "[HARD]\n";
+  text += "--------------------------------\n\n";
+
+  text += createTextForMode(
+    exportData.hard || []
+  );
+
+
+  // ----------------------------------------------------------
+  // ファイル生成
+  // ----------------------------------------------------------
+
+  const blob =
+    new Blob(
+      [text],
+      {
+        type: "text/plain;charset=utf-8"
+      }
+    );
+
+
+  const url =
+    URL.createObjectURL(blob);
+
+
+  const now =
+    new Date();
+
+
+  const year =
+    now.getFullYear();
+
+  const month =
+    String(now.getMonth() + 1)
+      .padStart(2, "0");
+
+  const day =
+    String(now.getDate())
+      .padStart(2, "0");
+
+
+  const fileName =
+    `karaokeBowlingConditions_${year}-${month}-${day}.txt`;
+
+
+  const link =
+    document.createElement("a");
+
+  link.href = url;
+
+  link.download = fileName;
+
+  document.body.appendChild(link);
+
+  link.click();
+
+  link.remove();
+
+
+  setTimeout(
+    () => URL.revokeObjectURL(url),
+    1000
+  );
+
+
+  showNotice(
+    "条件データを書き出しました"
+  );
+
+}
+
+
+// ============================================================
+// モード別テキスト作成
+// ============================================================
+
+function createTextForMode(items) {
+
+  if (!items.length) {
+
+    return "条件なし\n";
+
+  }
+
+
+  let result = "";
+
+  const categories = [];
+
+
+  /*
+   * 画面と同じジャンル順に並べる
+   */
+
+  items.forEach(item => {
+
+    if (
+      !categories.includes(item.category)
+    ) {
+
+      categories.push(item.category);
+
+    }
+
+  });
+
+
+  const orderedCategories = [
+
+    ...categoryOrder.filter(
+      category =>
+        categories.includes(category)
+    ),
+
+    ...categories.filter(
+      category =>
+        !categoryOrder.includes(category)
+    )
+
+  ];
+
+
+  orderedCategories.forEach(
+    category => {
+
+      result += `【${category}】\n`;
+
+
+      const categoryItems =
+        items.filter(
+          item =>
+            item.category === category
+        );
+
+
+      categoryItems.forEach(
+        item => {
+
+          result +=
+            `・${item.text}\n`;
+
+          result +=
+            `倍率：${Number(item.multiplier).toFixed(1)}\n`;
+
+          result += "\n";
+
+        }
+      );
+
+    }
+  );
+
+
+  return result;
 
 }
 
